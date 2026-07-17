@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Friends & Contacts</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#e2231a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Contacts">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#fafbfd;--bg2:#f0f2f8;--card:#fff;--text:#1a1d2e;--sub:#6b7194;
+    --border:#e4e7f1;--red:#e2231a;--white:#fff;
+    --accent:#2d5bff;--accent2:#7c6cf0;--green:#22b573;--orange:#f59e0b;
+    --shadow:0 4px 24px rgba(30,30,80,0.07);--radius:16px;
+    --cat-classmate:#3b82f6;--cat-teacher:#8b5cf6;--cat-priest:#06b6d4;
+    --cat-guardian:#f59e0b;--cat-emergency:#ef4444;
+  }
+  [data-theme="dark"]{
+    --bg:#0e0f18;--bg2:#161724;--card:#1c1d2e;--text:#e8eaf6;--sub:#8a8fb5;
+    --border:#2a2c42;--shadow:0 4px 24px rgba(0,0,0,0.35);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);transition:.3s;overflow-x:hidden;}
+  h1,h2,h3,h4{font-family:'Poppins',sans-serif;}
+
+  .topbar{
+    position:sticky;top:0;z-index:100;display:flex;justify-content:space-between;align-items:center;
+    padding:16px 32px;background:rgba(255,255,255,0.85);backdrop-filter:blur(16px);
+    border-bottom:1px solid var(--border);transition:.3s;
+  }
+  [data-theme="dark"] .topbar{background:rgba(14,15,24,0.85);}
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand-flag{width:44px;height:32px;border-radius:6px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 2px 8px rgba(0,0,0,0.15);}
+  .flag-red{flex:1;background:#ed2939;}.flag-white{flex:1;background:#fff;}
+  .brand h1{font-size:18px;font-weight:800;letter-spacing:-.3px;}
+  .brand span{font-size:11px;color:var(--sub);font-weight:500;display:block;}
+  .top-right{display:flex;align-items:center;gap:14px;}
+  .toggle{
+    width:48px;height:26px;border-radius:20px;background:var(--border);cursor:pointer;
+    position:relative;transition:.3s;flex-shrink:0;
+  }
+  .toggle::after{
+    content:'☀️';font-size:13px;position:absolute;top:2px;left:2px;width:22px;height:22px;
+    border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;
+    transition:.3s;box-shadow:0 2px 6px rgba(0,0,0,0.15);
+  }
+  [data-theme="dark"] .toggle::after{transform:translateX(22px);content:'🌙';background:#2a2c42;}
+
+  .container{max-width:1200px;margin:0 auto;padding:28px 28px 60px;}
+
+  .hero{
+    text-align:center;padding:50px 20px 40px;border-radius:24px;margin-bottom:32px;
+    background:linear-gradient(135deg,#3b82f6 0%,#8b5cf6 50%,#06b6d4 100%);color:#fff;
+  }
+  .hero h1{font-size:clamp(26px,5vw,42px);font-weight:800;letter-spacing:-1px;margin-bottom:6px;}
+  .hero p{font-size:15px;opacity:.9;max-width:460px;margin:0 auto;}
+  .hero-icon{font-size:48px;margin-bottom:10px;}
+
+  .nav-pills{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:32px;padding:0 10px;}
+  .pill{
+    padding:8px 16px;border-radius:24px;border:1.5px solid var(--border);background:var(--card);
+    font-size:12.5px;font-weight:600;cursor:pointer;transition:.2s;color:var(--sub);white-space:nowrap;
+  }
+  .pill:hover{border-color:var(--accent);color:var(--accent);}
+  .pill.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+  .section{display:none;animation:fadeUp .35s ease;}
+  .section.active{display:block;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:none;}}
+
+  .card{
+    background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:24px;margin-bottom:20px;box-shadow:var(--shadow);transition:.3s;
+  }
+  .card h3{font-size:17px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+  .card h3 .icon{font-size:22px;}
+
+  .summary-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin-bottom:28px;}
+  .summary-card{
+    background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;
+    text-align:center;box-shadow:var(--shadow);position:relative;overflow:hidden;
+  }
+  .summary-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;}
+  .sc-classmate::before{background:var(--cat-classmate);}
+  .sc-teacher::before{background:var(--cat-teacher);}
+  .sc-priest::before{background:var(--cat-priest);}
+  .sc-guardian::before{background:var(--cat-guardian);}
+  .sc-emergency::before{background:var(--cat-emergency);}
+  .sc-total::before{background:linear-gradient(90deg,var(--cat-classmate),var(--cat-emergency));}
+  .summary-card .sc-icon{font-size:28px;margin-bottom:4px;}
+  .summary-card .sc-num{font-size:24px;font-weight:800;font-family:'Poppins',sans-serif;}
+  .summary-card .sc-label{font-size:11px;color:var(--sub);font-weight:600;margin-top:2px;}
+
+  .input-row{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+  .input-row input,.input-row select,.input-row textarea{
+    padding:9px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;
+    font-family:inherit;background:var(--bg2);color:var(--text);transition:.2s;flex:1;min-width:100px;
+  }
+  .input-row input:focus,.input-row select:focus,.input-row textarea:focus{outline:none;border-color:var(--accent);}
+
+  .btn{padding:9px 20px;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;transition:.2s;font-family:inherit;}
+  .btn-primary{background:var(--accent);color:#fff;}.btn-primary:hover{opacity:.85;}
+  .btn-danger{background:#ef4444;color:#fff;}.btn-danger:hover{opacity:.85;}
+  .btn-outline{background:transparent;border:1.5px solid var(--border);color:var(--text);}.btn-outline:hover{border-color:var(--accent);}
+  .btn-call{background:var(--green);color:#fff;padding:6px 14px;font-size:12px;border-radius:8px;}
+  .btn-call:hover{opacity:.85;}
+  .btn-sm{padding:5px 12px;font-size:12px;}
+
+  .empty{text-align:center;color:var(--sub);padding:28px;font-size:13px;}
+
+  .contact-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
+  .contact-card{
+    background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;
+    box-shadow:var(--shadow);transition:.2s;position:relative;overflow:hidden;
+  }
+  .contact-card:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,0.1);}
+  .contact-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;}
+  .contact-card[data-cat="classmate"]::before{background:var(--cat-classmate);}
+  .contact-card[data-cat="teacher"]::before{background:var(--cat-teacher);}
+  .contact-card[data-cat="priest"]::before{background:var(--cat-priest);}
+  .contact-card[data-cat="guardian"]::before{background:var(--cat-guardian);}
+  .contact-card[data-cat="emergency"]::before{background:var(--cat-emergency);}
+
+  .cc-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;}
+  .cc-avatar{
+    width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;
+    font-size:22px;flex-shrink:0;color:#fff;font-weight:700;
+  }
+  .cc-info{flex:1;min-width:0;}
+  .cc-name{font-size:15px;font-weight:700;margin-bottom:2px;word-break:break-word;}
+  .cc-role{font-size:12px;color:var(--sub);font-weight:500;}
+  .cc-cat-badge{
+    display:inline-block;padding:2px 10px;border-radius:20px;font-size:10px;font-weight:700;margin-top:4px;
+  }
+  .cc-fields{margin-top:10px;}
+  .cc-field{
+    display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);
+    font-size:13px;
+  }
+  .cc-field-icon{font-size:14px;flex-shrink:0;width:20px;text-align:center;}
+  .cc-field-val{flex:1;word-break:break-word;}
+  .cc-field-val a{color:var(--accent);text-decoration:none;}
+  .cc-field-val a:hover{text-decoration:underline;}
+  .cc-actions{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap;}
+
+  .filter-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+  .filter-btn{
+    padding:5px 14px;border-radius:20px;border:1.5px solid var(--border);background:var(--card);
+    font-size:11.5px;font-weight:600;cursor:pointer;transition:.2s;color:var(--sub);
+  }
+  .filter-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .filter-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+  .search-bar{
+    width:100%;padding:10px 16px;border:1.5px solid var(--border);border-radius:12px;
+    font-size:14px;font-family:inherit;background:var(--bg2);color:var(--text);transition:.2s;margin-bottom:16px;
+  }
+  .search-bar:focus{outline:none;border-color:var(--accent);}
+
+  .cat-classmate-bg{background:var(--cat-classmate);}
+  .cat-teacher-bg{background:var(--cat-teacher);}
+  .cat-priest-bg{background:var(--cat-priest);}
+  .cat-guardian-bg{background:var(--cat-guardian);}
+  .cat-emergency-bg{background:var(--cat-emergency);}
+
+  .cat-badge-classmate{background:#dbeafe;color:#1e40af;}
+  .cat-badge-teacher{background:#ede9fe;color:#5b21b6;}
+  .cat-badge-priest{background:#cffafe;color:#155e75;}
+  .cat-badge-guardian{background:#fef3c7;color:#92400e;}
+  .cat-badge-emergency{background:#fecaca;color:#991b1b;}
+
+  .quick-dial{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;
+  }
+  .qd-card{
+    background:var(--card);border:2px solid var(--border);border-radius:14px;padding:16px;
+    text-align:center;cursor:pointer;transition:.2s;text-decoration:none;color:var(--text);
+  }
+  .qd-card:hover{border-color:var(--green);transform:translateY(-2px);}
+  .qd-card .qd-icon{font-size:28px;margin-bottom:6px;}
+  .qd-card .qd-name{font-size:14px;font-weight:700;margin-bottom:2px;}
+  .qd-card .qd-phone{font-size:12px;color:var(--green);font-weight:600;}
+
+  @media(max-width:640px){
+    .topbar{padding:12px 16px;}
+    .container{padding:16px 12px 40px;}
+    .contact-grid{grid-template-columns:1fr;}
+    .quick-dial{grid-template-columns:1fr 1fr;}
+    .summary-grid{grid-template-columns:1fr 1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-flag"><div class="flag-red"></div><div class="flag-white"></div><div class="flag-red"></div></div>
+    <div><h1>Friends & Contacts</h1><span>Everyone you need, in one place</span></div>
+  </div>
+  <div class="top-right">
+    <div class="toggle" onclick="toggleTheme()"></div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="hero">
+    <div class="hero-icon">👥</div>
+    <h1>Friends & Contacts</h1>
+    <p>Classmates, teachers, priests, guardian & emergency contacts — always accessible.</p>
+  </div>
+
+  <div class="summary-grid" id="summaryGrid"></div>
+
+  <div class="nav-pills">
+    <div class="pill active" data-sec="all">📋 All Contacts</div>
+    <div class="pill" data-sec="add">➕ Add New</div>
+    <div class="pill" data-sec="emergency">🚨 Emergency Dial</div>
+    <div class="pill" data-sec="classmates">👫 Classmates</div>
+    <div class="pill" data-sec="teachers">👩‍🏫 Teachers</div>
+    <div class="pill" data-sec="priests">⛪ Priests</div>
+    <div class="pill" data-sec="guardian">🛡️ Guardian</div>
+  </div>
+
+  <!-- ===== ALL CONTACTS ===== -->
+  <div class="section active" id="sec-all">
+    <div class="card">
+      <h3><span class="icon">📋</span> All Contacts</h3>
+      <input class="search-bar" id="searchBar" placeholder="🔍 Search by name, role, phone…" oninput="renderAll()">
+      <div class="filter-row" id="catFilter"></div>
+      <div class="contact-grid" id="allGrid"></div>
+      <div class="empty" id="allEmpty">No contacts yet. Add your first one!</div>
+    </div>
+  </div>
+
+  <!-- ===== ADD NEW ===== -->
+  <div class="section" id="sec-add">
+    <div class="card">
+      <h3><span class="icon">➕</span> Add Contact</h3>
+      <div class="input-row">
+        <select id="addCat">
+          <option value="classmate">👫 Classmate</option>
+          <option value="teacher">👩‍🏫 Teacher</option>
+          <option value="priest">⛪ Priest</option>
+          <option value="guardian">🛡️ Guardian</option>
+          <option value="emergency">🚨 Emergency</option>
+        </select>
+        <input id="addName" placeholder="Full name" style="flex:2;">
+      </div>
+      <div class="input-row">
+        <input id="addRole" placeholder="Role / Subject / Title (e.g. Maths Teacher)">
+        <input id="addPhone" type="tel" placeholder="Phone number">
+      </div>
+      <div class="input-row">
+        <input id="addEmail" type="email" placeholder="Email (optional)">
+        <input id="addClass" placeholder="Class / Room / Address (optional)">
+      </div>
+      <div class="input-row">
+        <textarea id="addNotes" placeholder="Notes (optional)" rows="2" style="resize:vertical;"></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="addContact()">Save Contact</button>
+    </div>
+  </div>
+
+  <!-- ===== EMERGENCY DIAL ===== -->
+  <div class="section" id="sec-emergency">
+    <div class="card">
+      <h3><span class="icon">🚨</span> Quick Emergency Dial</h3>
+      <p style="font-size:13px;color:var(--sub);margin-bottom:16px;">Tap to call. Long-press on mobile to copy number.</p>
+      <div class="quick-dial" id="quickDial"></div>
+      <div class="empty" id="qdEmpty">Add emergency contacts to see them here.</div>
+    </div>
+    <div class="card">
+      <h3><span class="icon">📞</span> Austrian Emergency Numbers</h3>
+      <div class="quick-dial">
+        <a class="qd-card" href="tel:112"><div class="qd-icon">🚨</div><div class="qd-name">General Emergency</div><div class="qd-phone">112</div></a>
+        <a class="qd-card" href="tel:133"><div class="qd-icon">👮</div><div class="qd-name">Police</div><div class="qd-phone">133</div></a>
+        <a class="qd-card" href="tel:122"><div class="qd-icon">🚒</div><div class="qd-name">Fire Brigade</div><div class="qd-phone">122</div></a>
+        <a class="qd-card" href="tel:144"><div class="qd-icon">🚑</div><div class="qd-name">Ambulance</div><div class="qd-phone">144</div></a>
+        <a class="qd-card" href="tel:141"><div class="qd-icon">🩺</div><div class="qd-name">Medical On-Call</div><div class="qd-phone">141</div></a>
+        <a class="qd-card" href="tel:140"><div class="qd-icon">🏔️</div><div class="qd-name">Mountain Rescue</div><div class="qd-phone">140</div></a>
+        <a class="qd-card" href="tel:120"><div class="qd-icon">🚗</div><div class="qd-name">Road Assistance</div><div class="qd-phone">120</div></a>
+        <a class="qd-card" href="tel:116111"><div class="qd-icon">👶</div><div class="qd-name">Child Emergency</div><div class="qd-phone">116 111</div></a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CATEGORY VIEWS ===== -->
+  <div class="section" id="sec-classmates">
+    <div class="card">
+      <h3><span class="icon">👫</span> Classmates</h3>
+      <div class="contact-grid" id="classmateGrid"></div>
+      <div class="empty" id="classmateEmpty">No classmates added yet.</div>
+    </div>
+  </div>
+  <div class="section" id="sec-teachers">
+    <div class="card">
+      <h3><span class="icon">👩‍🏫</span> Teachers</h3>
+      <div class="contact-grid" id="teacherGrid"></div>
+      <div class="empty" id="teacherEmpty">No teachers added yet.</div>
+    </div>
+  </div>
+  <div class="section" id="sec-priests">
+    <div class="card">
+      <h3><span class="icon">⛪</span> Priests</h3>
+      <div class="contact-grid" id="priestGrid"></div>
+      <div class="empty" id="priestEmpty">No priests added yet.</div>
+    </div>
+  </div>
+  <div class="section" id="sec-guardian">
+    <div class="card">
+      <h3><span class="icon">🛡️</span> Guardian</h3>
+      <div class="contact-grid" id="guardianGrid"></div>
+      <div class="empty" id="guardianEmpty">No guardian added yet.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== THEME ===== */
+function toggleTheme(){
+  const d=document.documentElement;
+  d.setAttribute('data-theme',d.getAttribute('data-theme')==='dark'?'light':'dark');
+  localStorage.setItem('fc-theme',d.getAttribute('data-theme'));
+}
+(function(){const t=localStorage.getItem('fc-theme');if(t)document.documentElement.setAttribute('data-theme',t);})();
+
+/* ===== NAV ===== */
+document.querySelectorAll('.pill').forEach(p=>p.addEventListener('click',function(){
+  document.querySelectorAll('.pill').forEach(x=>x.classList.remove('active'));
+  this.classList.add('active');
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('sec-'+this.dataset.sec).classList.add('active');
+}));
+
+/* ===== DATA ===== */
+const LS=k=>JSON.parse(localStorage.getItem('fc-'+k)||'[]');
+const SS=(k,v)=>localStorage.setItem('fc-'+k,JSON.stringify(v));
+function getContacts(){return LS('contacts');}
+function setContacts(d){SS('contacts',d);}
+
+const CATS=[
+  {key:'classmate',label:'Classmate',icon:'👫',color:'var(--cat-classmate)',bg:'cat-classmate-bg',badge:'cat-badge-classmate'},
+  {key:'teacher',label:'Teacher',icon:'👩‍🏫',color:'var(--cat-teacher)',bg:'cat-teacher-bg',badge:'cat-badge-teacher'},
+  {key:'priest',label:'Priest',icon:'⛪',color:'var(--cat-priest)',bg:'cat-priest-bg',badge:'cat-badge-priest'},
+  {key:'guardian',label:'Guardian',icon:'🛡️',color:'var(--cat-guardian)',bg:'cat-guardian-bg',badge:'cat-badge-guardian'},
+  {key:'emergency',label:'Emergency',icon:'🚨',color:'var(--cat-emergency)',bg:'cat-emergency-bg',badge:'cat-badge-emergency'}
+];
+const CAT_MAP={};CATS.forEach(c=>CAT_MAP[c.key]=c);
+
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+function initials(name){return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);}
+
+/* ===== ADD CONTACT ===== */
+function addContact(){
+  const cat=document.getElementById('addCat').value;
+  const name=document.getElementById('addName').value.trim();
+  const role=document.getElementById('addRole').value.trim();
+  const phone=document.getElementById('addPhone').value.trim();
+  const email=document.getElementById('addEmail').value.trim();
+  const cls=document.getElementById('addClass').value.trim();
+  const notes=document.getElementById('addNotes').value.trim();
+  if(!name){alert('Name is required.');return;}
+  const data=getContacts();
+  data.push({cat,name,role,phone,email,cls,notes,id:Date.now()});
+  setContacts(data);
+  ['addName','addRole','addPhone','addEmail','addClass','addNotes'].forEach(x=>document.getElementById(x).value='');
+  refreshAll();
+  /* switch to all view */
+  document.querySelectorAll('.pill').forEach(x=>x.classList.remove('active'));
+  document.querySelector('[data-sec="all"]').classList.add('active');
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('sec-all').classList.add('active');
+}
+
+/* ===== DELETE / EDIT ===== */
+function delContact(id){
+  if(!confirm('Delete this contact?'))return;
+  setContacts(getContacts().filter(c=>c.id!==id));refreshAll();
+}
+function editContact(id){
+  const c=getContacts().find(x=>x.id===id);if(!c)return;
+  const val=prompt('Edit name:',c.name);if(val===null||!val.trim())return;
+  c.name=val.trim();
+  const r2=prompt('Edit role/title:',c.role||'');if(r2!==null)c.role=r2.trim();
+  const p2=prompt('Edit phone:',c.phone||'');if(p2!==null)c.phone=p2.trim();
+  const e2=prompt('Edit email:',c.email||'');if(e2!==null)c.email=e2.trim();
+  const cl2=prompt('Edit class/room:',c.cls||'');if(cl2!==null)c.cls=cl2.trim();
+  const n2=prompt('Edit notes:',c.notes||'');if(n2!==null)c.notes=n2.trim();
+  const data=getContacts();const idx=data.findIndex(x=>x.id===id);if(idx>=0)data[idx]=c;
+  setContacts(data);refreshAll();
+}
+
+/* ===== RENDER ===== */
+let catFilter='all';
+function renderFilter(){
+  const el=document.getElementById('catFilter');
+  el.innerHTML=`<div class="filter-btn ${catFilter==='all'?'active':''}" onclick="setFilter('all')">All</div>`+
+    CATS.map(c=>`<div class="filter-btn ${catFilter===c.key?'active':''}" onclick="setFilter('${c.key}')">${c.icon} ${c.label}s</div>`).join('');
+}
+function setFilter(c){catFilter=c;renderFilter();renderAll();}
+
+function contactCardHTML(c){
+  const cat=CAT_MAP[c.cat]||CATS[0];
+  return `<div class="contact-card" data-cat="${c.cat}">
+    <div class="cc-top">
+      <div class="cc-avatar ${cat.bg}">${initials(c.name)}</div>
+      <div class="cc-info">
+        <div class="cc-name">${esc(c.name)}</div>
+        <div class="cc-role">${esc(c.role||cat.label)}</div>
+        <span class="cc-cat-badge ${cat.badge}">${cat.icon} ${cat.label}</span>
+      </div>
+    </div>
+    <div class="cc-fields">
+      ${c.phone?`<div class="cc-field"><span class="cc-field-icon">📞</span><span class="cc-field-val"><a href="tel:${esc(c.phone)}">${esc(c.phone)}</a></span></div>`:''}
+      ${c.email?`<div class="cc-field"><span class="cc-field-icon">✉️</span><span class="cc-field-val"><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></span></div>`:''}
+      ${c.cls?`<div class="cc-field"><span class="cc-field-icon">📍</span><span class="cc-field-val">${esc(c.cls)}</span></div>`:''}
+      ${c.notes?`<div class="cc-field"><span class="cc-field-icon">📝</span><span class="cc-field-val" style="color:var(--sub);font-size:12px;">${esc(c.notes)}</span></div>`:''}
+    </div>
+    <div class="cc-actions">
+      ${c.phone?`<a href="tel:${esc(c.phone)}" class="btn btn-call">📞 Call</a>`:''}
+      <button class="btn btn-outline btn-sm" onclick="editContact(${c.id})">✎ Edit</button>
+      <button class="btn btn-danger btn-sm" onclick="delContact(${c.id})">✕</button>
+    </div>
+  </div>`;
+}
+
+function renderAll(){
+  const data=getContacts();
+  const search=(document.getElementById('searchBar').value||'').toLowerCase();
+  let filtered=data;
+  if(catFilter!=='all')filtered=filtered.filter(c=>c.cat===catFilter);
+  if(search)filtered=filtered.filter(c=>(c.name+' '+c.role+' '+c.phone+' '+c.email+' '+c.cls+' '+c.notes).toLowerCase().includes(search));
+  const grid=document.getElementById('allGrid');const emp=document.getElementById('allEmpty');
+  if(!filtered.length){grid.innerHTML='';emp.style.display='';return;}
+  emp.style.display='none';
+  grid.innerHTML=filtered.map(c=>contactCardHTML(c)).join('');
+}
+
+function renderCategory(cat,gridId,emptyId){
+  const data=getContacts().filter(c=>c.cat===cat);
+  const grid=document.getElementById(gridId);const emp=document.getElementById(emptyId);
+  if(!data.length){grid.innerHTML='';emp.style.display='';return;}
+  emp.style.display='none';
+  grid.innerHTML=data.map(c=>contactCardHTML(c)).join('');
+}
+
+function renderSummary(){
+  const data=getContacts();
+  const g=document.getElementById('summaryGrid');
+  const counts={};
+  CATS.forEach(c=>counts[c.key]=data.filter(x=>x.cat===c.key).length);
+  g.innerHTML=`
+    <div class="summary-card sc-total"><div class="sc-icon">👥</div><div class="sc-num">${data.length}</div><div class="sc-label">Total Contacts</div></div>
+    <div class="summary-card sc-classmate"><div class="sc-icon">👫</div><div class="sc-num" style="color:var(--cat-classmate)">${counts.classmate}</div><div class="sc-label">Classmates</div></div>
+    <div class="summary-card sc-teacher"><div class="sc-icon">👩‍🏫</div><div class="sc-num" style="color:var(--cat-teacher)">${counts.teacher}</div><div class="sc-label">Teachers</div></div>
+    <div class="summary-card sc-priest"><div class="sc-icon">⛪</div><div class="sc-num" style="color:var(--cat-priest)">${counts.priest}</div><div class="sc-label">Priests</div></div>
+    <div class="summary-card sc-guardian"><div class="sc-icon">🛡️</div><div class="sc-num" style="color:var(--cat-guardian)">${counts.guardian}</div><div class="sc-label">Guardian</div></div>
+    <div class="summary-card sc-emergency"><div class="sc-icon">🚨</div><div class="sc-num" style="color:var(--cat-emergency)">${counts.emergency}</div><div class="sc-label">Emergency</div></div>
+  `;
+}
+
+function renderQuickDial(){
+  const data=getContacts().filter(c=>c.cat==='emergency'&&c.phone);
+  const el=document.getElementById('quickDial');const emp=document.getElementById('qdEmpty');
+  if(!data.length){el.innerHTML='';emp.style.display='';return;}
+  emp.style.display='none';
+  el.innerHTML=data.map(c=>`<a class="qd-card" href="tel:${esc(c.phone)}" oncontextmenu="copyPhone('${esc(c.phone)}',event)">
+    <div class="qd-icon">🚨</div>
+    <div class="qd-name">${esc(c.name)}</div>
+    <div class="qd-phone">${esc(c.phone)}</div>
+  </a>`).join('');
+}
+function copyPhone(p,e){
+  e.preventDefault();navigator.clipboard.writeText(p).then(()=>alert('Copied: '+p));
+}
+
+/* ===== INIT ===== */
+function refreshAll(){
+  renderSummary();renderFilter();renderAll();
+  renderCategory('classmate','classmateGrid','classmateEmpty');
+  renderCategory('teacher','teacherGrid','teacherEmpty');
+  renderCategory('priest','priestGrid','priestEmpty');
+  renderCategory('guardian','guardianGrid','guardianEmpty');
+  renderQuickDial();
+}
+refreshAll();
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
+</script>
+</body>
+</html>

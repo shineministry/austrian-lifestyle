@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boarding School Manager</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#e2231a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Boarding Manager">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#fafbfd;--bg2:#f0f2f8;--card:#fff;--text:#1a1d2e;--sub:#6b7194;
+    --border:#e4e7f1;--red:#e2231a;--white:#ffffff;
+    --accent:#2d5bff;--accent2:#7c6cf0;--green:#22b573;--orange:#f59e0b;
+    --shadow:0 4px 24px rgba(30,30,80,0.07);--radius:16px;
+    --grad1:linear-gradient(135deg,#e2231a 0%,#ff6b6b 100%);
+    --grad2:linear-gradient(135deg,#2d5bff 0%,#7c6cf0 100%);
+    --grad3:linear-gradient(135deg,#22b573 0%,#4fc3a1 100%);
+    --grad4:linear-gradient(135deg,#f59e0b 0%,#f4b942 100%);
+  }
+  [data-theme="dark"]{
+    --bg:#0e0f18;--bg2:#161724;--card:#1c1d2e;--text:#e8eaf6;--sub:#8a8fb5;
+    --border:#2a2c42;--shadow:0 4px 24px rgba(0,0,0,0.35);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);transition:.3s;overflow-x:hidden;}
+  h1,h2,h3,h4{font-family:'Poppins',sans-serif;}
+
+  .topbar{
+    position:sticky;top:0;z-index:100;display:flex;justify-content:space-between;align-items:center;
+    padding:16px 32px;background:rgba(255,255,255,0.85);backdrop-filter:blur(16px);
+    border-bottom:1px solid var(--border);transition:.3s;
+  }
+  [data-theme="dark"] .topbar{background:rgba(14,15,24,0.85);}
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand-flag{
+    width:44px;height:32px;border-radius:6px;overflow:hidden;display:flex;flex-direction:column;
+    box-shadow:0 2px 8px rgba(0,0,0,0.15);
+  }
+  .flag-red{flex:1;background:#ed2939;}
+  .flag-white{flex:1;background:#fff;}
+  .brand h1{font-size:18px;font-weight:800;letter-spacing:-.3px;}
+  .brand span{font-size:11px;color:var(--sub);font-weight:500;display:block;}
+  .top-right{display:flex;align-items:center;gap:14px;}
+  .toggle{
+    width:48px;height:26px;border-radius:20px;background:var(--border);cursor:pointer;
+    position:relative;transition:.3s;flex-shrink:0;
+  }
+  .toggle::after{
+    content:'☀️';font-size:13px;position:absolute;top:2px;left:2px;width:22px;height:22px;
+    border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;
+    transition:.3s;box-shadow:0 2px 6px rgba(0,0,0,0.15);
+  }
+  [data-theme="dark"] .toggle::after{transform:translateX(22px);content:'🌙';background:#2a2c42;}
+
+  .container{max-width:1200px;margin:0 auto;padding:28px 28px 60px;}
+
+  .hero{
+    text-align:center;padding:50px 20px 40px;border-radius:24px;margin-bottom:32px;
+    background:linear-gradient(135deg,#1a1d2e 0%,#2d5bff 50%,#7c6cf0 100%);color:#fff;
+  }
+  .hero h1{font-size:clamp(26px,5vw,42px);font-weight:800;letter-spacing:-1px;margin-bottom:8px;}
+  .hero p{font-size:15px;opacity:.9;max-width:500px;margin:0 auto;}
+  .hero-icon{font-size:48px;margin-bottom:12px;}
+
+  .nav-pills{
+    display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:32px;padding:0 10px;
+  }
+  .pill{
+    padding:8px 16px;border-radius:24px;border:1.5px solid var(--border);background:var(--card);
+    font-size:12.5px;font-weight:600;cursor:pointer;transition:.2s;color:var(--sub);white-space:nowrap;
+  }
+  .pill:hover{border-color:var(--accent);color:var(--accent);}
+  .pill.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+  .section{display:none;animation:fadeUp .35s ease;}
+  .section.active{display:block;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:none;}}
+
+  .card{
+    background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:24px;margin-bottom:20px;box-shadow:var(--shadow);transition:.3s;
+  }
+  .card h3{font-size:17px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+  .card h3 .icon{font-size:22px;}
+
+  table{width:100%;border-collapse:collapse;}
+  th{text-align:left;font-size:11.5px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;padding:10px 12px;border-bottom:2px solid var(--border);}
+  td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13.5px;vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+
+  .badge{
+    display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;
+  }
+  .b-green{background:#dcfce7;color:#166534;}
+  .b-orange{background:#fef3c7;color:#92400e;}
+  .b-red{background:#fecaca;color:#991b1b;}
+  .b-blue{background:#dbeafe;color:#1e40af;}
+  .b-purple{background:#ede9fe;color:#5b21b6;}
+
+  .checklist{list-style:none;}
+  .checklist li{
+    display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);
+    font-size:13.5px;cursor:pointer;user-select:none;
+  }
+  .checklist li:last-child{border-bottom:none;}
+  .checklist li.done{opacity:.45;text-decoration:line-through;}
+  .checklist li .cb{
+    width:20px;height:20px;border-radius:6px;border:2px solid var(--border);flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;font-size:12px;transition:.2s;
+  }
+  .checklist li.done .cb{background:var(--green);border-color:var(--green);color:#fff;}
+
+  .star{cursor:pointer;font-size:24px;transition:.15s;color:#d1d5db;}
+  .star.lit{color:#f59e0b;}
+  .star:hover{transform:scale(1.2);}
+
+  .input-row{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+  .input-row input,.input-row select,.input-row textarea{
+    padding:9px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;
+    font-family:inherit;background:var(--bg2);color:var(--text);transition:.2s;flex:1;min-width:120px;
+  }
+  .input-row input:focus,.input-row select:focus,.input-row textarea:focus{outline:none;border-color:var(--accent);}
+
+  .btn{
+    padding:9px 20px;border:none;border-radius:10px;font-size:13px;font-weight:600;
+    cursor:pointer;transition:.2s;font-family:inherit;
+  }
+  .btn-primary{background:var(--accent);color:#fff;}
+  .btn-primary:hover{opacity:.85;}
+  .btn-danger{background:#ef4444;color:#fff;}
+  .btn-danger:hover{opacity:.85;}
+  .btn-sm{padding:5px 12px;font-size:12px;}
+
+  .empty{text-align:center;color:var(--sub);padding:28px;font-size:13px;}
+
+  .rule-block{margin-bottom:18px;}
+  .rule-block h4{font-size:14px;font-weight:700;color:var(--accent);margin-bottom:6px;}
+  .rule-block p,.rule-block li{font-size:13px;line-height:1.65;color:var(--text);}
+  .rule-block ul{padding-left:18px;margin-top:4px;}
+  .rule-block li{margin-bottom:3px;}
+
+  .time-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;}
+  .time-card{
+    background:var(--bg2);border-radius:12px;padding:14px;text-align:center;
+    border:1px solid var(--border);
+  }
+  .time-card .grade{font-size:12px;font-weight:700;color:var(--sub);margin-bottom:4px;}
+  .time-card .time{font-size:20px;font-weight:800;color:var(--accent);}
+  .time-card .label{font-size:11px;color:var(--sub);margin-top:2px;}
+
+  .meal-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);}
+  .meal-row:last-child{border-bottom:none;}
+  .meal-name{font-weight:600;font-size:14px;min-width:100px;}
+  .meal-stars{display:flex;gap:2px;}
+  .meal-note{flex:1;}
+  .meal-note input{
+    width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;
+    background:var(--bg2);color:var(--text);font-family:inherit;
+  }
+
+  .summary-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:24px;}
+  .summary-card{
+    background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;
+    text-align:center;box-shadow:var(--shadow);
+  }
+  .summary-card .sc-icon{font-size:30px;margin-bottom:6px;}
+  .summary-card .sc-num{font-size:24px;font-weight:800;font-family:'Poppins',sans-serif;}
+  .summary-card .sc-label{font-size:11px;color:var(--sub);font-weight:600;margin-top:2px;}
+
+  @media(max-width:640px){
+    .topbar{padding:12px 16px;}
+    .container{padding:16px 12px 40px;}
+    .time-grid{grid-template-columns:1fr 1fr;}
+    .summary-grid{grid-template-columns:1fr 1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-flag"><div class="flag-red"></div><div class="flag-white"></div><div class="flag-red"></div></div>
+    <div><h1>Boarding School Manager</h1><span>Track everything. Stay organized.</span></div>
+  </div>
+  <div class="top-right">
+    <div class="toggle" onclick="toggleTheme()"></div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="hero">
+    <div class="hero-icon">🏫</div>
+    <h1>Boarding School Manager</h1>
+    <p>Laundry, chores, meals, rules — everything in one place.</p>
+  </div>
+
+  <div class="summary-grid" id="summaryGrid"></div>
+
+  <div class="nav-pills" id="navPills">
+    <div class="pill active" data-sec="laundry">🧺 Laundry</div>
+    <div class="pill" data-sec="cleaning">🧹 Room Cleaning</div>
+    <div class="pill" data-sec="pocket">💰 Pocket Money</div>
+    <div class="pill" data-sec="chores">📋 Chores</div>
+    <div class="pill" data-sec="weekend">🚗 Weekend</div>
+    <div class="pill" data-sec="packing">🎒 Packing</div>
+    <div class="pill" data-sec="meals">🍽️ Meal Ratings</div>
+    <div class="pill" data-sec="rules">📜 Dorm Rules</div>
+  </div>
+
+  <!-- ========== LAUNDRY ========== -->
+  <div class="section active" id="sec-laundry">
+    <div class="card">
+      <h3><span class="icon">🧺</span> Laundry Schedule</h3>
+      <div class="input-row">
+        <select id="laundryDay"><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option></select>
+        <input id="laundryTime" type="time" value="16:00">
+        <input id="laundryItem" placeholder="e.g. Shirts, Towels…">
+        <button class="btn btn-primary" onclick="addLaundry()">Add</button>
+      </div>
+      <table>
+        <thead><tr><th>Day</th><th>Time</th><th>Item</th><th>Status</th><th></th></tr></thead>
+        <tbody id="laundryBody"></tbody>
+      </table>
+      <div class="empty" id="laundryEmpty">No laundry scheduled yet.</div>
+    </div>
+  </div>
+
+  <!-- ========== ROOM CLEANING ========== -->
+  <div class="section" id="sec-cleaning">
+    <div class="card">
+      <h3><span class="icon">🧹</span> Room Cleaning Schedule</h3>
+      <p style="font-size:13px;color:var(--sub);margin-bottom:14px;">Room must be vacuumed and bin emptied every week before Friday departure. Bathroom &amp; toilet cleaned once a week.</p>
+      <div class="input-row">
+        <select id="cleanTask">
+          <option>Make Bed</option><option>Vacuum Room</option><option>Empty Bin</option>
+          <option>Clean Bathroom</option><option>Clean Toilet</option><option>Wipe Mirror Shelf</option>
+          <option>Wipe Table</option><option>Organise Wardrobe</option>
+        </select>
+        <select id="cleanDay"><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option selected>Friday</option></select>
+        <button class="btn btn-primary" onclick="addClean()">Add</button>
+      </div>
+      <table>
+        <thead><tr><th>Task</th><th>Day</th><th>Done</th><th></th></tr></thead>
+        <tbody id="cleanBody"></tbody>
+      </table>
+      <div class="empty" id="cleanEmpty">No cleaning tasks yet.</div>
+    </div>
+  </div>
+
+  <!-- ========== POCKET MONEY ========== -->
+  <div class="section" id="sec-pocket">
+    <div class="card">
+      <h3><span class="icon">💰</span> Pocket Money Tracker</h3>
+      <div class="input-row">
+        <input id="pockDesc" placeholder="Description">
+        <input id="pockAmt" type="number" placeholder="Amount (€)" step="0.01">
+        <select id="pockType"><option value="in">Received</option><option value="out">Spent</option></select>
+        <button class="btn btn-primary" onclick="addPocket()">Add</button>
+      </div>
+      <div style="display:flex;gap:14px;margin-bottom:14px;flex-wrap:wrap;">
+        <div style="background:var(--bg2);border-radius:12px;padding:14px 20px;text-align:center;flex:1;min-width:120px;">
+          <div style="font-size:11px;font-weight:700;color:var(--sub);">Balance</div>
+          <div id="pockBal" style="font-size:24px;font-weight:800;color:var(--green);">€0.00</div>
+        </div>
+        <div style="background:var(--bg2);border-radius:12px;padding:14px 20px;text-align:center;flex:1;min-width:120px;">
+          <div style="font-size:11px;font-weight:700;color:var(--sub);">Received</div>
+          <div id="pockIn" style="font-size:20px;font-weight:700;color:var(--green);">€0.00</div>
+        </div>
+        <div style="background:var(--bg2);border-radius:12px;padding:14px 20px;text-align:center;flex:1;min-width:120px;">
+          <div style="font-size:11px;font-weight:700;color:var(--sub);">Spent</div>
+          <div id="pockOut" style="font-size:20px;font-weight:700;color:#ef4444;">€0.00</div>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th><th></th></tr></thead>
+        <tbody id="pockBody"></tbody>
+      </table>
+      <div class="empty" id="pockEmpty">No transactions yet.</div>
+    </div>
+  </div>
+
+  <!-- ========== CHORES ========== -->
+  <div class="section" id="sec-chores">
+    <div class="card">
+      <h3><span class="icon">📋</span> Weekly Chores</h3>
+      <p style="font-size:13px;color:var(--sub);margin-bottom:14px;">Floor duty: set up breakfast/dinner 5 min early, tidy common room &amp; kitchen at 20:30, check bins.</p>
+      <div class="input-row">
+        <input id="choreName" placeholder="Chore name">
+        <select id="choreDay"><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option></select>
+        <input id="chorePerson" placeholder="Assigned to">
+        <button class="btn btn-primary" onclick="addChore()">Add</button>
+      </div>
+      <table>
+        <thead><tr><th>Chore</th><th>Day</th><th>Assigned To</th><th>Done</th><th></th></tr></thead>
+        <tbody id="choreBody"></tbody>
+      </table>
+      <div class="empty" id="choreEmpty">No chores assigned yet.</div>
+    </div>
+  </div>
+
+  <!-- ========== WEEKEND ========== -->
+  <div class="section" id="sec-weekend">
+    <div class="card">
+      <h3><span class="icon">🚗</span> Weekend Permissions</h3>
+      <p style="font-size:13px;color:var(--sub);margin-bottom:14px;">Boarding school closes on weekends. All students go home Friday after last class. Guest students must register for weekend meals by Thursday evening.</p>
+      <div class="input-row">
+        <input id="wkndWhat" placeholder="What / Where">
+        <input id="wkndDate" type="date">
+        <input id="wkndReturn" type="time" placeholder="Return time">
+        <select id="wkndStatus"><option>Pending</option><option>Approved</option><option>Denied</option></select>
+        <button class="btn btn-primary" onclick="addWeekend()">Add</button>
+      </div>
+      <table>
+        <thead><tr><th>Plan</th><th>Date</th><th>Return</th><th>Status</th><th></th></tr></thead>
+        <tbody id="wkndBody"></tbody>
+      </table>
+      <div class="empty" id="wkndEmpty">No weekend plans yet.</div>
+    </div>
+  </div>
+
+  <!-- ========== PACKING ========== -->
+  <div class="section" id="sec-packing">
+    <div class="card">
+      <h3><span class="icon">🎒</span> Packing Checklist</h3>
+      <div class="input-row">
+        <input id="packItem" placeholder="Add item…">
+        <select id="packCat">
+          <option>Clothes</option><option>Toiletries</option><option>School</option><option>Electronics</option><option>Other</option>
+        </select>
+        <button class="btn btn-primary" onclick="addPackItem()">Add</button>
+      </div>
+      <div id="packList"></div>
+      <div class="empty" id="packEmpty">Nothing to pack yet.</div>
+    </div>
+  </div>
+
+  <!-- ========== MEAL RATINGS ========== -->
+  <div class="section" id="sec-meals">
+    <div class="card">
+      <h3><span class="icon">🍽️</span> Meal Ratings</h3>
+      <p style="font-size:13px;color:var(--sub);margin-bottom:14px;">Breakfast 7:15–7:30 · Dinner 17:45–18:15. Punctuality required.</p>
+      <div id="mealList"></div>
+      <button class="btn btn-primary" onclick="addMealRow()" style="margin-top:12px;">+ Add Meal</button>
+    </div>
+    <div class="card">
+      <h3><span class="icon">⭐</span> Rating History</h3>
+      <table>
+        <thead><tr><th>Date</th><th>Meal</th><th>Rating</th><th>Note</th></tr></thead>
+        <tbody id="mealHistory"></tbody>
+      </table>
+      <div class="empty" id="mealHistEmpty">No ratings yet.</div>
+    </div>
+  </div>
+
+  <!-- ========== DORM RULES ========== -->
+  <div class="section" id="sec-rules">
+    <div class="card">
+      <h3><span class="icon">📜</span> Boarding House Rules</h3>
+      <p style="font-size:13px;color:var(--sub);margin-bottom:18px;">Translated from the official German Internatsordnung &amp; Schulordnung of Privatgymnasium der Herz-Jesu-Missionare, Salzburg.</p>
+
+      <div class="rule-block">
+        <h4>Daily Routine</h4>
+        <ul>
+          <li>Wake-up at <strong>6:45</strong> — get out of bed when the radio alarm sounds, prepare yourself and your school things. Tidy your room.</li>
+          <li><strong>Breakfast: 7:15 – 7:30</strong> (minimum stay until 7:30). <strong>Dinner: 17:45 – 18:15.</strong> All students must be present for the full duration of meals.</li>
+          <li>After breakfast, do <strong>not</strong> return to the boarding building. Go with packed school bag to breakfast, then directly to class. (Exception: upper-year free period.)</li>
+        </ul>
+      </div>
+
+      <div class="rule-block">
+        <h4>School Day</h4>
+        <ul>
+          <li>Staying in the boarding house during school hours (7:50 – 16:40, including Tagesheim) is <strong>forbidden</strong>. No presence during breaks or lunch free time. (Exceptions: changing for PE, first period free per timetable, Tagesheim exemptions from Year 7.)</li>
+          <li>Outside persons or fellow students may <strong>not</strong> enter the boarding house between 7:50 and 16:40.</li>
+          <li><strong>Sickness / absence</strong> must be reported to the boarding supervisor <em>and</em> the school office by morning (phone or in person). Stay in bed only after supervisor permission.</li>
+        </ul>
+      </div>
+
+      <div class="rule-block">
+        <h4>Weekend</h4>
+        <ul>
+          <li>The boarding house is <strong>closed</strong> on weekends. All students go home Friday after the last class (exceptions: guest students or with boarding head approval).</li>
+          <li>Guest students must <strong>register for weekend meals with the supervisor on Thursday evening</strong>.</li>
+          <li>Participation in boarding weekends is <strong>mandatory</strong>. Active participation in community life is expected.</li>
+        </ul>
+      </div>
+
+      <div class="rule-block">
+        <h4>Room Order</h4>
+        <ul>
+          <li>Rooms must be left <strong>tidy each morning</strong>: bed made, no suitcases/clothes on the floor, no plates or cups left behind.</li>
+          <li><strong>Weekly</strong>: every room must be vacuumed and the bin emptied (bin station in corridor or large station at school). Room inspection by supervisor before Friday departure — can be done Thursday evening on request.</li>
+          <li>Shoes must <strong>not</strong> be kept in the room — store them in the yellow lockers on the ground floor (exception: sports shoes and slippers).</li>
+          <li>Once a week, every room must clean the bathroom, toilet, and mirror shelves. Clear everything the evening before or in the morning.</li>
+        </ul>
+      </div>
+
+      <div class="rule-block">
+        <h4>Floor Duty (Stockwerksdienst)</h4>
+        <ul>
+          <li>One student per week has floor duty. Tasks: set up breakfast and dinner — pick up the trolley from the kitchen <strong>5 minutes before the meal</strong> (7:10 / 17:40) and bring it to the dining hall. Collect the floor duty key from the supervisor's room in advance.</li>
+          <li>After meals: soak plates, wipe tables, return trolley to kitchen (by 18:10 at the latest).</li>
+          <li>Every evening at <strong>20:30</strong>: tidy the common room, ground-floor kitchen, and study hall (straighten chairs, cushions) and report any issues to the supervisor.</li>
+          <li>Monitor corridor bin stations — if overflowing, empty them at the school bin station.</li>
+          <li>If unable to do duty, <strong>find your own substitute</strong>.</li>
+        </ul>
+      </div>
+
+      <div class="rule-block">
+        <h4>Common Room &amp; Kitchen</h4>
+        <ul>
+          <li>Common room and ground-floor kitchen are normally <strong>locked</strong>. Borrow the key from the supervisor. Cooking is an exception available only to older students, and requires prior permission.</li>
+          <li>After use, restore order and wash/put away dishes yourself. Checked by floor duty at 20:30.</li>
+          <li>Ordering or bringing in food without supervisor permission is <strong>forbidden</strong>.</li>
+        </ul>
+      </div>
+
+      <div class="rule-block">
+        <h4>Sign-Out &amp; Communication</h4>
+        <ul>
+          <li>Leaving: sign out <strong>personally</strong> with a supervisor and enter it in the sign-out list.</li>
+          <li>You must inform the supervisor team of <strong>all absences</strong>, in person (also possible during school breaks). Only in emergencies may email or phone be used.</li>
+          <li>Supervisors must always know where students are. The responsibility to communicate lies with the student.</li>
+        </ul>
+      </div>
+
+      <div class="rule-block">
+        <h4>Bedtime</h4>
+        <p style="margin-bottom:6px;">Stop playing/working with devices <strong>1 hour</strong> before bedtime. Brush teeth and get ready for bed <strong>15 minutes</strong> before.</p>
+        <div class="time-grid">
+          <div class="time-card"><div class="grade">Years 1 &amp; 2</div><div class="time">20:15 → 20:30</div><div class="label">Lights out</div></div>
+          <div class="time-card"><div class="grade">Year 3</div><div class="time">20:30 → 20:45</div><div class="label">Lights out</div></div>
+          <div class="time-card"><div class="grade">Year 4</div><div class="time">20:45 → 21:00</div><div class="label">Lights out</div></div>
+          <div class="time-card"><div class="grade">Years 5 &amp; 6</div><div class="time">22:00</div><div class="label">Lights out, sleep</div></div>
+          <div class="time-card"><div class="grade">Years 7 &amp; 8</div><div class="time">22:00+</div><div class="label">In room from 22:00</div></div>
+        </div>
+      </div>
+
+      <div class="rule-block">
+        <h4>Phones &amp; Electronic Devices</h4>
+        <ul>
+          <li>Gaming max <strong>45 min per day</strong>; school work as needed and agreed. Lower years hand in all devices at the supervisor's room <strong>1 hour before bedtime</strong>. Upper years follow agreed rules independently.</li>
+          <li>After bedtime, <strong>no devices of any kind</strong> are allowed.</li>
+          <li>Charging devices in the school area is <strong>forbidden</strong>.</li>
+        </ul>
+      </div>
+
+      <div class="rule-block">
+        <h4>General Conduct</h4>
+        <ul>
+          <li>Treat boarding property respectfully: furniture, mattresses (each must have a protector and own sheet), walls, ceilings, games, kitchen, etc.</li>
+          <li>Possession, use, and trade of <strong>alcohol or drugs</strong> is strictly forbidden. (Exception: from age 16+, one shared beer in the supervisor's room after 21:00 with a supervisor.)</li>
+          <li>Mixed boarding: from 20:30, cross-gender room visits are forbidden. All sexual contact or intimate contact on school/boarding grounds is forbidden and may result in <strong>immediate expulsion</strong>.</li>
+          <li>Formal disciplinary measures: warning of boarding expulsion, and boarding expulsion, decided by the supervisor team.</li>
+          <li>Cooperation between supervisors and students is based on <strong>good communication and mutual trust</strong>.</li>
+        </ul>
+      </div>
+
+      <div class="rule-block">
+        <h4>School Rules (Summary)</h4>
+        <ul>
+          <li>Supervision begins <strong>15 minutes before class</strong>. Students may not leave the school grounds during school time including breaks.</li>
+          <li>After school / Tagesheim, leave the school grounds <strong>immediately</strong>.</li>
+          <li>Be punctual, participate, and keep materials ready. Private appointments must be outside school hours.</li>
+          <li>Eating and drinking only during breaks. Indoor shoes required inside the school building.</li>
+          <li>Electronic devices: allowed as <strong>work medium only</strong>, when permitted by the teacher. Entertainment use is forbidden in school and free-time areas. Lower years: devices either not brought to school or switched off and stored until end of school/Tagesheim.</li>
+          <li>No bicycles/mopeds on unauthorised areas. Student cars may not park on school grounds.</li>
+          <li>Know the alarm plans and follow them in emergencies.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ========== THEME ========== */
+function toggleTheme(){
+  const d=document.documentElement;
+  d.setAttribute('data-theme',d.getAttribute('data-theme')==='dark'?'light':'dark');
+  localStorage.setItem('bsm-theme',d.getAttribute('data-theme'));
+}
+(function(){const t=localStorage.getItem('bsm-theme');if(t)document.documentElement.setAttribute('data-theme',t);})();
+
+/* ========== NAV ========== */
+const pills=document.querySelectorAll('.pill');
+const secs=document.querySelectorAll('.section');
+pills.forEach(p=>p.addEventListener('click',()=>{
+  pills.forEach(x=>x.classList.remove('active'));p.classList.add('active');
+  secs.forEach(s=>s.classList.remove('active'));
+  document.getElementById('sec-'+p.dataset.sec).classList.add('active');
+}));
+
+/* ========== HELPERS ========== */
+const LS=k=>JSON.parse(localStorage.getItem('bsm-'+k)||'[]');
+const SS=(k,v)=>localStorage.setItem('bsm-'+k,JSON.stringify(v));
+const today=()=>new Date().toISOString().slice(0,10);
+
+/* ========== SUMMARY ========== */
+function updateSummary(){
+  const g=document.getElementById('summaryGrid');
+  const l=LS('laundry').length;
+  const c=LS('clean').filter(x=>!x.done).length;
+  const ch=LS('chores').filter(x=>!x.done).length;
+  const bal=pockBalCalc();
+  g.innerHTML=`
+    <div class="summary-card"><div class="sc-icon">🧺</div><div class="sc-num">${l}</div><div class="sc-label">Laundry Items</div></div>
+    <div class="summary-card"><div class="sc-icon">🧹</div><div class="sc-num">${c}</div><div class="sc-label">Cleaning Pending</div></div>
+    <div class="summary-card"><div class="sc-icon">📋</div><div class="sc-num">${ch}</div><div class="sc-label">Chores Left</div></div>
+    <div class="summary-card"><div class="sc-icon">💰</div><div class="sc-num" style="color:${bal>=0?'var(--green)':'#ef4444'}">€${bal.toFixed(2)}</div><div class="sc-label">Pocket Money</div></div>
+  `;
+}
+
+/* ========== LAUNDRY ========== */
+function renderLaundry(){
+  const data=LS('laundry');const tb=document.getElementById('laundryBody');
+  const emp=document.getElementById('laundryEmpty');
+  if(!data.length){tb.innerHTML='';emp.style.display='';updateSummary();return;}
+  emp.style.display='none';
+  const statusColors={pending:'b-orange',done:'b-green',washed:'b-blue'};
+  tb.innerHTML=data.map((r,i)=>`<tr>
+    <td>${r.day}</td><td>${r.time||'-'}</td><td>${esc(r.item)}</td>
+    <td><span class="badge ${statusColors[r.status]||'b-orange'}" style="cursor:pointer" onclick="cycleLaundryStatus(${i})">${r.status}</span></td>
+    <td><button class="btn btn-danger btn-sm" onclick="delLaundry(${i})">✕</button></td>
+  </tr>`).join('');
+  updateSummary();
+}
+function addLaundry(){
+  const d=document.getElementById('laundryDay').value;
+  const t=document.getElementById('laundryTime').value;
+  const item=document.getElementById('laundryItem').value.trim();if(!item)return;
+  const data=LS('laundry');data.push({day:d,time:t,item,status:'pending',created:today()});SS('laundry',data);
+  document.getElementById('laundryItem').value='';renderLaundry();
+}
+function delLaundry(i){const d=LS('laundry');d.splice(i,1);SS('laundry',d);renderLaundry();}
+function cycleLaundryStatus(i){
+  const d=LS('laundry');const order=['pending','washed','done'];
+  d[i].status=order[(order.indexOf(d[i].status)+1)%3];SS('laundry',d);renderLaundry();
+}
+
+/* ========== CLEANING ========== */
+function renderClean(){
+  const data=LS('clean');const tb=document.getElementById('cleanBody');
+  const emp=document.getElementById('cleanEmpty');
+  if(!data.length){tb.innerHTML='';emp.style.display='';updateSummary();return;}
+  emp.style.display='none';
+  tb.innerHTML=data.map((r,i)=>`<tr>
+    <td>${esc(r.task)}</td><td>${r.day}</td>
+    <td><input type="checkbox" ${r.done?'checked':''} onchange="toggleClean(${i},this.checked)" style="width:18px;height:18px;cursor:pointer;"></td>
+    <td><button class="btn btn-danger btn-sm" onclick="delClean(${i})">✕</button></td>
+  </tr>`).join('');
+  updateSummary();
+}
+function addClean(){
+  const task=document.getElementById('cleanTask').value;
+  const day=document.getElementById('cleanDay').value;
+  const data=LS('clean');data.push({task,day,done:false});SS('clean',data);renderClean();
+}
+function toggleClean(i,v){const d=LS('clean');d[i].done=v;SS('clean',d);renderClean();}
+function delClean(i){const d=LS('clean');d.splice(i,1);SS('clean',d);renderClean();}
+
+/* ========== POCKET MONEY ========== */
+function pockBalCalc(){
+  return LS('pocket').reduce((s,r)=>s+(r.type==='in'?r.amt:-r.amt),0);
+}
+function renderPocket(){
+  const data=LS('pocket');const tb=document.getElementById('pockBody');
+  const emp=document.getElementById('pockEmpty');
+  if(!data.length){tb.innerHTML='';emp.style.display='';updateSummary();return;}
+  emp.style.display='none';
+  const totalIn=data.filter(r=>r.type==='in').reduce((s,r)=>s+r.amt,0);
+  const totalOut=data.filter(r=>r.type==='out').reduce((s,r)=>s+r.amt,0);
+  const bal=totalIn-totalOut;
+  document.getElementById('pockBal').textContent='€'+bal.toFixed(2);
+  document.getElementById('pockBal').style.color=bal>=0?'var(--green)':'#ef4444';
+  document.getElementById('pockIn').textContent='€'+totalIn.toFixed(2);
+  document.getElementById('pockOut').textContent='€'+totalOut.toFixed(2);
+  tb.innerHTML=data.slice().reverse().map((r,i)=>{
+    const idx=data.length-1-i;
+    return `<tr>
+      <td>${r.date}</td><td>${esc(r.desc)}</td>
+      <td><span class="badge ${r.type==='in'?'b-green':'b-red'}">${r.type==='in'?'Received':'Spent'}</span></td>
+      <td style="font-weight:700;color:${r.type==='in'?'var(--green)':'#ef4444'}">${r.type==='in'?'+':'-'}€${r.amt.toFixed(2)}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="delPocket(${idx})">✕</button></td>
+    </tr>`;
+  }).join('');
+  updateSummary();
+}
+function addPocket(){
+  const desc=document.getElementById('pockDesc').value.trim()||'Untitled';
+  const amt=parseFloat(document.getElementById('pockAmt').value);if(isNaN(amt)||amt<=0)return;
+  const type=document.getElementById('pockType').value;
+  const data=LS('pocket');data.push({desc,amt,type,date:today()});SS('pocket',data);
+  document.getElementById('pockDesc').value='';document.getElementById('pockAmt').value='';renderPocket();
+}
+function delPocket(i){const d=LS('pocket');d.splice(i,1);SS('pocket',d);renderPocket();}
+
+/* ========== CHORES ========== */
+function renderChores(){
+  const data=LS('chores');const tb=document.getElementById('choreBody');
+  const emp=document.getElementById('choreEmpty');
+  if(!data.length){tb.innerHTML='';emp.style.display='';updateSummary();return;}
+  emp.style.display='none';
+  tb.innerHTML=data.map((r,i)=>`<tr>
+    <td>${esc(r.name)}</td><td>${r.day}</td><td>${esc(r.person)}</td>
+    <td><input type="checkbox" ${r.done?'checked':''} onchange="toggleChore(${i},this.checked)" style="width:18px;height:18px;cursor:pointer;"></td>
+    <td><button class="btn btn-danger btn-sm" onclick="delChore(${i})">✕</button></td>
+  </tr>`).join('');
+  updateSummary();
+}
+function addChore(){
+  const name=document.getElementById('choreName').value.trim();if(!name)return;
+  const day=document.getElementById('choreDay').value;
+  const person=document.getElementById('chorePerson').value.trim()||'—';
+  const data=LS('chores');data.push({name,day,person,done:false});SS('chores',data);
+  document.getElementById('choreName').value='';document.getElementById('chorePerson').value='';renderChores();
+}
+function toggleChore(i,v){const d=LS('chores');d[i].done=v;SS('chores',d);renderChores();}
+function delChore(i){const d=LS('chores');d.splice(i,1);SS('chores',d);renderChores();}
+
+/* ========== WEEKEND ========== */
+function renderWeekend(){
+  const data=LS('weekend');const tb=document.getElementById('wkndBody');
+  const emp=document.getElementById('wkndEmpty');
+  if(!data.length){tb.innerHTML='';emp.style.display='';return;}
+  emp.style.display='none';
+  const sc={Pending:'b-orange',Approved:'b-green',Denied:'b-red'};
+  tb.innerHTML=data.map((r,i)=>`<tr>
+    <td>${esc(r.what)}</td><td>${r.date||'-'}</td><td>${r.ret||'-'}</td>
+    <td><span class="badge ${sc[r.status]||'b-orange'}" style="cursor:pointer" onclick="cycleWkndStatus(${i})">${r.status}</span></td>
+    <td><button class="btn btn-danger btn-sm" onclick="delWknd(${i})">✕</button></td>
+  </tr>`).join('');
+}
+function addWeekend(){
+  const what=document.getElementById('wkndWhat').value.trim();if(!what)return;
+  const date=document.getElementById('wkndDate').value;
+  const ret=document.getElementById('wkndReturn').value;
+  const status=document.getElementById('wkndStatus').value;
+  const data=LS('weekend');data.push({what,date,ret,status});SS('weekend',data);
+  document.getElementById('wkndWhat').value='';renderWeekend();
+}
+function cycleWkndStatus(i){
+  const d=LS('weekend');const o=['Pending','Approved','Denied'];
+  d[i].status=o[(o.indexOf(d[i].status)+1)%3];SS('weekend',d);renderWeekend();
+}
+function delWknd(i){const d=LS('weekend');d.splice(i,1);SS('weekend',d);renderWeekend();}
+
+/* ========== PACKING ========== */
+const PACK_DEFAULTS={
+  Clothes:['T-shirts','Pants/Jeans','Underwear','Socks','Jacket','Pyjamas','Sports clothes','Shoes','Slippers'],
+  Toiletries:['Toothbrush','Toothpaste','Shampoo','Soap','Towel','Hairbrush','Deodorant','Sunscreen'],
+  School:['Textbooks','Notebooks','Pens & Pencils','Calculator','Planner','USB drive','Folder'],
+  Electronics:['Phone','Charger','Power bank','Laptop','Earbuds','Adapter'],
+  Other:['Water bottle','Medications','ID card','Wallet','Keys','Snacks','Books']
+};
+function renderPacking(){
+  const data=LS('packing');const cats={};
+  data.forEach(r=>{if(!cats[r.cat])cats[r.cat]=[];cats[r.cat].push(r);});
+  const el=document.getElementById('packList');const emp=document.getElementById('packEmpty');
+  if(!data.length){el.innerHTML='';emp.style.display='';return;}
+  emp.style.display='none';
+  const icons={Clothes:'👕',Toiletries:'🧴',School:'📚',Electronics:'🔌',Other:'📦'};
+  el.innerHTML=Object.keys(cats).map(cat=>{
+    const items=cats[cat];
+    const doneCount=items.filter(x=>x.done).length;
+    return `<div style="margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <strong style="font-size:13px;">${icons[cat]||'📦'} ${cat}</strong>
+        <span style="font-size:11px;color:var(--sub);">${doneCount}/${items.length}</span>
+      </div>
+      <ul class="checklist">${items.map((r,i)=>{
+        const idx=data.indexOf(r);
+        return `<li class="${r.done?'done':''}" onclick="togglePack(${idx})">
+          <div class="cb">${r.done?'✓':''}</div>${esc(r.item)}
+          <button class="btn btn-danger btn-sm" style="margin-left:auto;padding:2px 8px;font-size:11px;" onclick="event.stopPropagation();delPack(${idx})">✕</button>
+        </li>`;
+      }).join('')}</ul>
+    </div>`;
+  }).join('');
+}
+function addPackItem(){
+  const item=document.getElementById('packItem').value.trim();if(!item)return;
+  const cat=document.getElementById('packCat').value;
+  const data=LS('packing');data.push({item,cat,done:false});SS('packing',data);
+  document.getElementById('packItem').value='';renderPacking();
+}
+function togglePack(i){const d=LS('packing');d[i].done=!d[i].done;SS('packing',d);renderPacking();}
+function delPack(i){const d=LS('packing');d.splice(i,1);SS('packing',d);renderPacking();}
+
+/* quick-add defaults */
+function addDefaultPack(){
+  if(LS('packing').length>0)return;
+  const all=[];
+  Object.keys(PACK_DEFAULTS).forEach(cat=>{PACK_DEFAULTS[cat].forEach(item=>{all.push({item,cat,done:false});});});
+  SS('packing',all);renderPacking();
+}
+
+/* ========== MEAL RATINGS ========== */
+function renderMeals(){
+  const data=LS('meals');const el=document.getElementById('mealList');
+  const meals=data.length?data:['Breakfast','Lunch','Dinner','Snack'];
+  if(!data.length)SS('meals',meals);
+  el.innerHTML=meals.map((m,i)=>{
+    const hist=LS('mealhist');
+    return `<div class="meal-row">
+      <div class="meal-name">${esc(m)}</div>
+      <div class="meal-stars" id="mstars-${i}">${[1,2,3,4,5].map(s=>
+        `<span class="star ${''/*check*/}" onclick="rateMeal('${esc(m)}',${s})" data-meal="${m}" data-val="${s}">★</span>`
+      ).join('')}</div>
+      <div class="meal-note"><input placeholder="Quick note…" onchange="addMealNote('${esc(m)}',this.value)"></div>
+    </div>`;
+  }).join('');
+  renderMealHistory();
+}
+function rateMeal(meal,val){
+  const data=LS('mealhist');data.push({meal,val,date:today(),note:''});SS('mealhist',data);
+  renderMealHistory();
+  /* update stars visually */
+  document.querySelectorAll(`.meal-stars .star`).forEach(s=>{
+    if(s.dataset.meal===meal)s.classList.toggle('lit',parseInt(s.dataset.val)<=val);
+  });
+}
+function addMealNote(meal,note){
+  const data=LS('mealhist');
+  const last=data.filter(r=>r.meal===meal).pop();
+  if(last){last.note=note;SS('mealhist',data);renderMealHistory();}
+}
+function addMealRow(){
+  const name=prompt('Meal name:');if(!name)return;
+  const data=LS('meals');data.push(name);SS('meals',data);renderMeals();
+}
+function renderMealHistory(){
+  const data=LS('mealhist');const tb=document.getElementById('mealHistory');
+  const emp=document.getElementById('mealHistEmpty');
+  if(!data.length){tb.innerHTML='';emp.style.display='';return;}
+  emp.style.display='none';
+  tb.innerHTML=data.slice().reverse().map(r=>`<tr>
+    <td>${r.date}</td><td>${esc(r.meal)}</td>
+    <td style="color:var(--orange);letter-spacing:2px;">${'★'.repeat(r.val)}${'☆'.repeat(5-r.val)}</td>
+    <td style="color:var(--sub);font-size:12px;">${esc(r.note||'-')}</td>
+  </tr>`).join('');
+}
+
+/* ========== UTIL ========== */
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+/* ========== INIT ========== */
+renderLaundry();renderClean();renderPocket();renderChores();renderWeekend();addDefaultPack();renderPacking();renderMeals();updateSummary();
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
+</script>
+</body>
+</html>

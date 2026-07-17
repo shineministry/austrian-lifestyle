@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Austria Life Companion</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#e2231a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Austria Life">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#fafbfd;--bg2:#f0f2f8;--card:#fff;--text:#1a1d2e;--sub:#6b7194;
+    --border:#e4e7f1;--red:#e2231a;--red2:#c41e17;--white:#ffffff;
+    --accent:#2d5bff;--accent2:#7c6cf0;--green:#22b573;--orange:#f59e0b;
+    --shadow:0 4px 24px rgba(30,30,80,0.07);--radius:16px;
+    --grad1:linear-gradient(135deg,#e2231a 0%,#ff6b6b 100%);
+    --grad2:linear-gradient(135deg,#2d5bff 0%,#7c6cf0 100%);
+    --grad3:linear-gradient(135deg,#22b573 0%,#4fc3a1 100%);
+    --grad4:linear-gradient(135deg,#f59e0b 0%,#f4b942 100%);
+  }
+  [data-theme="dark"]{
+    --bg:#0e0f18;--bg2:#161724;--card:#1c1d2e;--text:#e8eaf6;--sub:#8a8fb5;
+    --border:#2a2c42;--shadow:0 4px 24px rgba(0,0,0,0.35);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);transition:.3s;overflow-x:hidden;}
+  h1,h2,h3,h4{font-family:'Poppins',sans-serif;}
+
+  .topbar{
+    position:sticky;top:0;z-index:100;display:flex;justify-content:space-between;align-items:center;
+    padding:16px 32px;background:rgba(255,255,255,0.85);backdrop-filter:blur(16px);
+    border-bottom:1px solid var(--border);transition:.3s;
+  }
+  [data-theme="dark"] .topbar{background:rgba(14,15,24,0.85);}
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand-flag{
+    width:44px;height:32px;border-radius:6px;overflow:hidden;display:flex;flex-direction:column;
+    box-shadow:0 2px 8px rgba(0,0,0,0.15);
+  }
+  .flag-red{flex:1;background:#ed2939;}
+  .flag-white{flex:1;background:#fff;}
+  .brand h1{font-size:18px;font-weight:800;letter-spacing:-.3px;}
+  .brand span{font-size:11px;color:var(--sub);font-weight:500;display:block;}
+  .top-right{display:flex;align-items:center;gap:14px;}
+  .toggle{
+    width:48px;height:26px;border-radius:20px;background:var(--border);cursor:pointer;
+    position:relative;transition:.3s;flex-shrink:0;
+  }
+  .toggle::after{
+    content:'☀️';font-size:13px;position:absolute;top:2px;left:2px;width:22px;height:22px;
+    border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;
+    transition:.3s;box-shadow:0 2px 6px rgba(0,0,0,0.15);
+  }
+  [data-theme="dark"] .toggle::after{transform:translateX(22px);content:'🌙';background:#2a2c42;}
+
+  .container{max-width:1200px;margin:0 auto;padding:28px 28px 60px;}
+
+  .hero{
+    text-align:center;padding:50px 20px 40px;border-radius:24px;margin-bottom:32px;
+    background:linear-gradient(135deg,#e2231a 0%,#ff6b6b 40%,#fff 40.5%,#fff 59.5%,#ed2939 60%);
+    color:#fff;position:relative;overflow:hidden;
+  }
+  [data-theme="dark"] .hero{
+    background:linear-gradient(135deg,#8b1a14 0%,#c41e17 40%,#1c1d2e 40.5%,#1c1d2e 59.5%,#8b1a14 60%);
+  }
+  .hero h1{font-size:clamp(28px,5vw,44px);font-weight:800;letter-spacing:-1px;margin-bottom:8px;}
+  .hero p{font-size:16px;opacity:.9;max-width:500px;margin:0 auto;}
+  .hero-icon{font-size:48px;margin-bottom:12px;}
+
+  .nav-pills{
+    display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:32px;
+    padding:0 10px;
+  }
+  .pill{
+    padding:8px 16px;border-radius:24px;border:1.5px solid var(--border);background:var(--card);
+    font-size:12.5px;font-weight:600;cursor:pointer;transition:.2s;color:var(--sub);
+    white-space:nowrap;
+  }
+  .pill:hover{border-color:var(--red);color:var(--red);}
+  .pill.active{background:var(--red);color:#fff;border-color:var(--red);}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:20px;}
+  .card{
+    background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:24px;box-shadow:var(--shadow);transition:.3s;animation:fadeUp .5s ease both;
+  }
+  .card:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(30,30,80,0.1);}
+  [data-theme="dark"] .card:hover{box-shadow:0 8px 32px rgba(0,0,0,0.4);}
+  .card-full{grid-column:1/-1;}
+  .card-head{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+  .card-icon{
+    width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+    font-size:20px;flex-shrink:0;
+  }
+  .card-head h2{font-size:16px;font-weight:700;}
+  .card-head .badge{
+    margin-left:auto;font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;
+    background:var(--bg2);color:var(--sub);
+  }
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:none;}}
+  .card:nth-child(1){animation-delay:.05s;}
+  .card:nth-child(2){animation-delay:.1s;}
+  .card:nth-child(3){animation-delay:.15s;}
+  .card:nth-child(4){animation-delay:.2s;}
+  .card:nth-child(5){animation-delay:.25s;}
+  .card:nth-child(6){animation-delay:.3s;}
+  .card:nth-child(7){animation-delay:.35s;}
+  .card:nth-child(8){animation-delay:.4s;}
+  .card:nth-child(9){animation-delay:.45s;}
+
+  .em-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px;}
+  .em-item{
+    background:var(--bg2);border-radius:12px;padding:14px;text-align:center;
+    border:1px solid var(--border);transition:.2s;cursor:default;
+  }
+  .em-item:hover{border-color:var(--red);transform:scale(1.02);}
+  .em-num{font-size:22px;font-weight:800;font-family:'Poppins',sans-serif;color:var(--red);}
+  .em-label{font-size:11px;color:var(--sub);font-weight:600;margin-top:4px;}
+  .em-icon{font-size:20px;margin-bottom:4px;}
+
+  .hol-list{display:flex;flex-direction:column;gap:8px;}
+  .hol-item{
+    display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:12px;
+    background:var(--bg2);border:1px solid var(--border);transition:.2s;
+  }
+  .hol-item:hover{border-color:var(--red);}
+  .hol-date{
+    min-width:52px;text-align:center;font-weight:700;font-size:11px;color:var(--red);
+    background:rgba(226,35,26,0.08);border-radius:8px;padding:6px 4px;line-height:1.2;
+  }
+  .hol-name{font-size:13px;font-weight:600;flex:1;}
+  .hol-emoji{font-size:18px;}
+
+  .school-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .school-table th{
+    text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;
+    color:var(--sub);font-weight:700;padding:8px 10px;border-bottom:2px solid var(--border);
+  }
+  .school-table td{padding:10px;border-bottom:1px solid var(--border);}
+  .school-table tr:last-child td{border-bottom:none;}
+  .school-table tr:hover td{background:var(--bg2);}
+  .term-badge{
+    display:inline-block;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;
+  }
+  .term-fall{background:rgba(245,158,11,0.12);color:#d97706;}
+  .term-winter{background:rgba(45,91,255,0.12);color:#2d5bff;}
+  .term-spring{background:rgba(34,181,115,0.12);color:#16a34a;}
+  .term-summer{background:rgba(226,35,26,0.12);color:#e2231a;}
+
+  .etiq-list{display:flex;flex-direction:column;gap:10px;}
+  .etiq-item{
+    display:flex;gap:12px;padding:12px 14px;border-radius:12px;
+    background:var(--bg2);border:1px solid var(--border);
+  }
+  .etiq-icon{font-size:22px;flex-shrink:0;margin-top:2px;}
+  .etiq-text{font-size:13px;line-height:1.5;}
+  .etiq-text strong{color:var(--text);}
+
+  .shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;}
+  .shop-card{
+    background:var(--bg2);border-radius:12px;padding:16px;border:1px solid var(--border);
+    text-align:center;transition:.2s;
+  }
+  .shop-card:hover{border-color:var(--accent);transform:scale(1.02);}
+  .shop-icon{font-size:28px;margin-bottom:6px;}
+  .shop-type{font-size:13px;font-weight:700;margin-bottom:2px;}
+  .shop-hours{font-size:12px;color:var(--sub);font-weight:500;}
+
+  .weather-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;}
+  .weather-card{
+    background:var(--bg2);border-radius:14px;padding:18px;text-align:center;
+    border:1px solid var(--border);transition:.2s;
+  }
+  .weather-card:hover{transform:scale(1.03);}
+  .weather-season{font-size:13px;font-weight:700;margin-bottom:4px;}
+  .weather-temp{font-size:28px;font-weight:800;font-family:'Poppins',sans-serif;}
+  .weather-desc{font-size:11px;color:var(--sub);font-weight:500;margin-top:2px;}
+  .weather-wear{font-size:12px;margin-top:8px;padding:6px 10px;background:var(--card);border-radius:8px;font-weight:500;}
+
+  .cur-box{
+    display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;
+    margin-bottom:20px;
+  }
+  .cur-field{flex:1;min-width:160px;}
+  .cur-field label{display:block;font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+  .cur-field input,.cur-field select{
+    width:100%;padding:12px 14px;border-radius:12px;border:1.5px solid var(--border);
+    background:var(--bg2);font-size:15px;font-weight:600;font-family:'Poppins',sans-serif;
+    color:var(--text);outline:none;transition:.2s;
+  }
+  .cur-field input:focus,.cur-field select:focus{border-color:var(--accent);}
+  .cur-btn{
+    padding:12px 28px;border-radius:12px;border:none;background:var(--accent);color:#fff;
+    font-size:14px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;
+    transition:.2s;
+  }
+  .cur-btn:hover{filter:brightness(1.1);transform:translateY(-1px);}
+  .cur-result{
+    text-align:center;padding:24px;background:var(--bg2);border-radius:16px;
+    border:1px solid var(--border);
+  }
+  .cur-result .amount{font-size:42px;font-weight:800;font-family:'Poppins',sans-serif;color:var(--accent);}
+  .cur-result .label{font-size:13px;color:var(--sub);margin-top:4px;}
+  .cur-rates{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-top:16px;
+  }
+  .cur-rate{
+    background:var(--bg2);border-radius:10px;padding:10px;text-align:center;
+    border:1px solid var(--border);font-size:12px;
+  }
+  .cur-rate .code{font-weight:700;color:var(--accent);}
+  .cur-rate .val{font-weight:600;margin-top:2px;}
+  .table-scroll{max-height:500px;overflow:auto;border-radius:12px;border:1px solid var(--border);margin-top:12px;}
+  .table-scroll table{width:100%;border-collapse:collapse;}
+  .table-scroll thead{position:sticky;top:0;z-index:2;}
+  .table-scroll th{background:var(--accent);color:#fff;padding:12px;text-align:left;}
+  [data-theme="dark"] .table-scroll th{background:#3a4aaa;}
+  .table-scroll td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;}
+  .table-scroll tbody tr:nth-child(even){background:var(--bg2);}
+  .table-scroll tbody tr:hover{background:rgba(45,91,255,0.06);}
+  [data-theme="dark"] .table-scroll tbody tr:hover{background:rgba(45,91,255,0.12);}
+  .school-status{font-size:11px;color:var(--sub);text-align:center;margin-bottom:10px;}
+
+  .trans-list{display:flex;flex-direction:column;gap:10px;}
+  .trans-item{
+    display:flex;gap:12px;padding:14px;border-radius:12px;
+    background:var(--bg2);border:1px solid var(--border);
+  }
+  .trans-icon{font-size:24px;flex-shrink:0;}
+  .trans-content h4{font-size:13px;font-weight:700;margin-bottom:3px;}
+  .trans-content p{font-size:12px;color:var(--sub);line-height:1.5;}
+
+  .recycle-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;}
+  .recycle-card{
+    border-radius:14px;padding:18px;text-align:center;border:2px solid;transition:.2s;
+    background:var(--card);
+  }
+  .recycle-card:hover{transform:scale(1.03);}
+  .recycle-icon{font-size:32px;margin-bottom:6px;}
+  .recycle-type{font-size:13px;font-weight:700;margin-bottom:2px;}
+  .recycle-items{font-size:11px;color:var(--sub);line-height:1.5;}
+  .rc-yellow{border-color:#f59e0b;background:rgba(245,158,11,0.04);}
+  .rc-blue{border-color:#2d5bff;background:rgba(45,91,255,0.04);}
+  .rc-green{border-color:#22b573;background:rgba(34,181,115,0.04);}
+  .rc-brown{border-color:#92400e;background:rgba(146,64,14,0.04);}
+  .rc-red{border-color:#e2231a;background:rgba(226,35,26,0.04);}
+  .rc-gray{border-color:#6b7194;background:rgba(107,113,148,0.04);}
+
+  footer{text-align:center;color:var(--sub);font-size:12px;padding:30px 0 10px;}
+
+  @media(max-width:600px){
+    .topbar{padding:12px 16px;}
+    .container{padding:16px 14px 40px;}
+    .hero{padding:36px 16px 30px;}
+    .grid{grid-template-columns:1fr;}
+    .em-grid{grid-template-columns:repeat(2,1fr);}
+    .cur-box{flex-direction:column;}
+  }
+  ::-webkit-scrollbar{width:6px;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px;}
+</style>
+</head>
+<body data-theme="light">
+
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-flag"><div class="flag-red"></div><div class="flag-white"></div><div class="flag-red"></div></div>
+    <div>
+      <h1>Austria Life Companion</h1>
+      <span>Everything about living in Austria</span>
+    </div>
+  </div>
+  <div class="top-right">
+    <div class="toggle" id="themeToggle" title="Toggle dark mode"></div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="hero">
+    <div class="hero-icon">🇦🇹</div>
+    <h1>Willkommen in Osterreich</h1>
+    <p>Your complete companion to Austrian life — from emergency numbers to recycling bins.</p>
+  </div>
+
+  <div class="nav-pills" id="navPills">
+    <div class="pill active" data-target="all">All Sections</div>
+    <div class="pill" data-target="emergency">Emergency</div>
+    <div class="pill" data-target="holidays">Holidays</div>
+    <div class="pill" data-target="school">School</div>
+    <div class="pill" data-target="etiquette">Etiquette</div>
+    <div class="pill" data-target="shopping">Shopping</div>
+    <div class="pill" data-target="weather">Weather</div>
+    <div class="pill" data-target="currency">Currency</div>
+    <div class="pill" data-target="transport">Transport</div>
+    <div class="pill" data-target="recycling">Recycling</div>
+  </div>
+
+  <div class="grid">
+
+    <!-- EMERGENCY NUMBERS -->
+    <div class="card" data-section="emergency">
+      <div class="card-head">
+        <div class="card-icon" style="background:rgba(226,35,26,0.1);">🚨</div>
+        <h2>Emergency Numbers</h2>
+        <span class="badge">LIFE SAVER</span>
+      </div>
+      <div class="em-grid">
+        <div class="em-item"><div class="em-icon">🚔</div><div class="em-num">133</div><div class="em-label">Police</div></div>
+        <div class="em-item"><div class="em-icon">🚒</div><div class="em-num">122</div><div class="em-label">Fire Brigade</div></div>
+        <div class="em-item"><div class="em-icon">🚑</div><div class="em-num">144</div><div class="em-label">Ambulance</div></div>
+        <div class="em-item"><div class="em-icon">🇪🇺</div><div class="em-num">112</div><div class="em-label">EU Emergency</div></div>
+        <div class="em-item"><div class="em-icon">🏔️</div><div class="em-num">140</div><div class="em-label">Mountain Rescue</div></div>
+        <div class="em-item"><div class="em-icon"> SOS</div><div class="em-num">141</div><div class="em-label">Doctor on Call</div></div>
+        <div class="em-item"><div class="em-icon">🍷</div><div class="em-num">142</div><div class="em-label">Crisis Helpline</div></div>
+        <div class="em-item"><div class="em-icon">👨‍👩‍👧</div><div class="em-num">116 111</div><div class="em-label">Child Helpline</div></div>
+        <div class="em-item"><div class="em-icon">🔥</div><div class="em-num">120</div><div class="em-label">Gas Emergency</div></div>
+        <div class="em-item"><div class="em-icon">⚖️</div><div class="em-num">0800 222 555</div><div class="em-label">Legal Aid (free)</div></div>
+      </div>
+    </div>
+
+    <!-- PUBLIC HOLIDAYS -->
+    <div class="card" data-section="holidays">
+      <div class="card-head">
+        <div class="card-icon" style="background:rgba(245,158,11,0.1);">📅</div>
+        <h2>Public Holidays</h2>
+        <span class="badge">2025 / 2026</span>
+      </div>
+      <div class="hol-list">
+        <div class="hol-item"><div class="hol-date">1 Jan</div><div class="hol-name">Neujahr (New Year's Day)</div><div class="hol-emoji">🎆</div></div>
+        <div class="hol-item"><div class="hol-date">6 Jan</div><div class="hol-name">Heilige Drei Konige (Epiphany)</div><div class="hol-emoji">👑</div></div>
+        <div class="hol-item"><div class="hol-date">Apr 18</div><div class="hol-name">Karfreitag (Good Friday)</div><div class="hol-emoji">✝️</div></div>
+        <div class="hol-item"><div class="hol-date">Apr 21</div><div class="hol-name">Ostermontag (Easter Monday)</div><div class="hol-emoji">🐣</div></div>
+        <div class="hol-item"><div class="hol-date">May 1</div><div class="hol-name">Staatsfeiertag (National Day)</div><div class="hol-emoji">🇦🇹</div></div>
+        <div class="hol-item"><div class="hol-date">May 29</div><div class="hol-name">Christi Himmelfahrt (Ascension)</div><div class="hol-emoji">🕊️</div></div>
+        <div class="hol-item"><div class="hol-date">Jun 9</div><div class="hol-name">Pfingstmontag (Whit Monday)</div><div class="hol-emoji">🕊️</div></div>
+        <div class="hol-item"><div class="hol-date">Jun 19</div><div class="hol-name">Fronleichnam (Corpus Christi)</div><div class="hol-emoji">⛪</div></div>
+        <div class="hol-item"><div class="hol-date">Aug 15</div><div class="hol-name">Maria Himmelfahrt (Assumption)</div><div class="hol-emoji">🙏</div></div>
+        <div class="hol-item"><div class="hol-date">Oct 26</div><div class="hol-name">Nationalfeiertag (Independence)</div><div class="hol-emoji">🏳️</div></div>
+        <div class="hol-item"><div class="hol-date">Nov 1</div><div class="hol-name">Allerheiligen (All Saints')</div><div class="hol-emoji">🕯️</div></div>
+        <div class="hol-item"><div class="hol-date">Dec 8</div><div class="hol-name">Mariä Empfangnis (Immaculate)</div><div class="hol-emoji">✨</div></div>
+        <div class="hol-item"><div class="hol-date">Dec 25</div><div class="hol-name">Weihnachtstag (Christmas Day)</div><div class="hol-emoji">🎄</div></div>
+        <div class="hol-item"><div class="hol-date">Dec 26</div><div class="hol-name">Stefanitag (St. Stephen's Day)</div><div class="hol-emoji">⛪</div></div>
+      </div>
+    </div>
+
+    <!-- SCHOOL CALENDAR -->
+    <div class="card" data-section="school">
+      <div class="card-head">
+        <div class="card-icon" style="background:rgba(45,91,255,0.1);">🏫</div>
+        <h2>School Calendar</h2>
+        <span class="badge" id="schoolBadge">2026/27</span>
+      </div>
+      <div class="school-status" id="schoolStatus"></div>
+      <div class="hol-list" id="schoolList"></div>
+    </div>
+
+    <!-- AUSTRIAN ETIQUETTE -->
+    <div class="card" data-section="etiquette">
+      <div class="card-head">
+        <div class="card-icon" style="background:rgba(124,108,240,0.1);">🎩</div>
+        <h2>Austrian Etiquette</h2>
+      </div>
+      <div class="etiq-list">
+        <div class="etiq-item">
+          <div class="etiq-icon">🤝</div>
+          <div class="etiq-text"><strong>Greetings:</strong> Use "Gruss Gott" as a universal greeting. Shake hands when meeting someone. Use "Sie" (formal you) unless invited to use "Du".</div>
+        </div>
+        <div class="etiq-item">
+          <div class="etiq-icon"> punctuality</div>
+          <div class="etiq-text"><strong>Punctuality is sacred.</strong> Arriving late is considered very rude. Being 5 minutes early is the norm. Germans call it "Punktlichkeit" — Austrians take it even more seriously.</div>
+        </div>
+        <div class="etiq-item">
+          <div class="etiq-icon">🚪</div>
+          <div class="etiq-text"><strong>Doors & Elevators:</strong> Always hold the door for the person behind you. In elevators, greet everyone with "Gruss Gott" when entering.</div>
+        </div>
+        <div class="etiq-item">
+          <div class="etiq-icon">🍷</div>
+          <div class="etiq-text"><strong>Coffee house culture:</strong> Sit as long as you like in a Cafe. But never rush a waiter — order at the table. Tipping: round up 5-10%.</div>
+        </div>
+        <div class="etiq-item">
+          <div class="etiq-icon">🗣️</div>
+          <div class="etiq-text"><strong>Language:</strong> German is official. Many Austrians speak dialect (Wienerisch). Basic German phrases earn huge respect. "Danke" and "Bitte" go a long way.</div>
+        </div>
+        <div class="etiq-item">
+          <div class="etiq-icon">🏠</div>
+          <div class="etiq-text"><strong>Visiting homes:</strong> Bring a small gift (flowers, chocolate, wine). Remove shoes at the door — look for the Schuhschrank (shoe cabinet).</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SHOPPING HOURS -->
+    <div class="card" data-section="shopping">
+      <div class="card-head">
+        <div class="card-icon" style="background:rgba(34,181,115,0.1);">🛍️</div>
+        <h2>Shopping Hours</h2>
+      </div>
+      <div class="shop-grid">
+        <div class="shop-card">
+          <div class="shop-icon">🏬</div>
+          <div class="shop-type">Supermarkets</div>
+          <div class="shop-hours">Mon-Sat: 7:30 - 19:30<br>Sun: Closed</div>
+        </div>
+        <div class="shop-card">
+          <div class="shop-icon">🛒</div>
+          <div class="shop-type">Large Malls</div>
+          <div class="shop-hours">Mon-Fri: 9:00 - 20:00<br>Sat: 9:00 - 18:00</div>
+        </div>
+        <div class="shop-card">
+          <div class="shop-icon">🏪</div>
+          <div class="shop-type">Small Shops</div>
+          <div class="shop-hours">Mon-Fri: 9:00 - 18:00<br>Sat: 9:00 - 13:00</div>
+        </div>
+        <div class="shop-card">
+          <div class="shop-icon">🍽️</div>
+          <div class="shop-type">Restaurants</div>
+          <div class="shop-hours">Lunch: 11:30 - 14:00<br>Dinner: 18:00 - 23:00</div>
+        </div>
+        <div class="shop-card">
+          <div class="shop-icon">☕</div>
+          <div class="shop-type">Cafes</div>
+          <div class="shop-hours">7:00 - 19:00 (daily)<br>Some open later</div>
+        </div>
+        <div class="shop-card">
+          <div class="shop-icon">⛔</div>
+          <div class="shop-type">Sunday Rules</div>
+          <div class="shop-hours">Shops closed! Only gas stations,<br>bakeries, train stations例外</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WEATHER SHORTCUTS -->
+    <div class="card card-full" data-section="weather">
+      <div class="card-head">
+        <div class="card-icon" style="background:rgba(90,169,230,0.1);">🌤️</div>
+        <h2>Weather & What to Wear</h2>
+      </div>
+      <div class="weather-grid">
+        <div class="weather-card">
+          <div class="weather-season">🌸 Spring</div>
+          <div class="weather-temp" style="color:#22b573;">8-18°C</div>
+          <div class="weather-desc">Mar - May</div>
+          <div class="weather-wear">Layer up, light jacket, umbrella handy</div>
+        </div>
+        <div class="weather-card">
+          <div class="weather-season">☀️ Summer</div>
+          <div class="weather-temp" style="color:#f59e0b;">20-32°C</div>
+          <div class="weather-desc">Jun - Aug</div>
+          <div class="weather-wear">Sunscreen, sunglasses, light clothing</div>
+        </div>
+        <div class="weather-card">
+          <div class="weather-season">🍂 Autumn</div>
+          <div class="weather-temp" style="color:#e2231a;">5-15°C</div>
+          <div class="weather-desc">Sep - Nov</div>
+          <div class="weather-wear">Warm layers, waterproof jacket, boots</div>
+        </div>
+        <div class="weather-card">
+          <div class="weather-season">❄️ Winter</div>
+          <div class="weather-temp" style="color:#2d5bff;">-5 - 3°C</div>
+          <div class="weather-desc">Dec - Feb</div>
+          <div class="weather-wear">Heavy coat, scarf, gloves, thermal layers</div>
+        </div>
+        <div class="weather-card">
+          <div class="weather-season">🧥 Fohn Wind</div>
+          <div class="weather-temp" style="color:#7c6cf0;">Warm gusts</div>
+          <div class="weather-desc">Alpine phenomenon</div>
+          <div class="weather-wear">Can raise temps 15-20°C in hours. Dress light!</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CURRENCY CALCULATOR (online) -->
+    <div class="card card-full" data-section="currency" id="onlineCurrency">
+      <div class="card-head">
+        <div class="card-icon" style="background:rgba(45,91,255,0.1);">💱</div>
+        <h2>Currency Calculator</h2>
+        <span class="badge" id="curBadge">Loading rates...</span>
+      </div>
+      <div class="cur-box">
+        <div class="cur-field" style="min-width:200px;">
+          <label>Direction</label>
+          <select id="curMode" onchange="onCurModeChange()">
+            <option value="toEUR">All currencies → EUR</option>
+            <option value="fromEUR">EUR → Select currencies</option>
+          </select>
+        </div>
+        <div class="cur-field" style="min-width:140px;">
+          <label>Amount</label>
+          <input type="number" id="curAmount" value="1" min="0" step="any">
+        </div>
+        <div class="cur-field" id="curFromWrap" style="min-width:200px;display:none;">
+          <label>Select Currency</label>
+          <select id="curFrom"></select>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Currency</th><th style="text-align:right;">Rate</th></tr></thead>
+          <tbody id="curTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TRANSPORT TIPS -->
+    <div class="card" data-section="transport">
+      <div class="card-head">
+        <div class="card-icon" style="background:rgba(90,169,230,0.1);">🚆</div>
+        <h2>Transport Tips</h2>
+      </div>
+      <div class="trans-list">
+        <div class="trans-item">
+          <div class="trans-icon">🎫</div>
+          <div class="trans-content"><h4>Annual Ticket (Klimaticket)</h4><p>E995/year for ALL public transport nationwide — trains, buses, trams, U-Bahn. The best deal in Europe. Under 26 pays ~E525.</p></div>
+        </div>
+        <div class="trans-item">
+          <div class="trans-icon">🚇</div>
+          <div class="trans-content"><h4>Vienna U-Bahn</h4><p>Runs 5AM-12:30AM. Night buses (N lines) run all night on weekends. Single ticket: E2.40. 24h pass: E8. Always validate your ticket!</p></div>
+        </div>
+        <div class="trans-item">
+          <div class="trans-icon">🚌</div>
+          <div class="trans-content"><h4>Regional Buses (Postbus)</h4><p>Connect rural areas. Buy tickets online at oebb.at or from the driver (surcharge). Check the Postbus app for schedules.</p></div>
+        </div>
+        <div class="trans-item">
+          <div class="trans-icon">🚄</div>
+          <div class="trans-content"><h4>Trains (OBB)</h4><p>Westbahn competes with OBB on Vienna-Salzburg route — often cheaper! Book Sparschiene tickets early for huge discounts.</p></div>
+        </div>
+        <div class="trans-item">
+          <div class="trans-icon">🚗</div>
+          <div class="trans-content"><h4>Driving Rules</h4><p>Drive on the right. Headlights mandatory 24/7. Winter tires required Nov-Apr. Vignette (highway sticker) mandatory — buy at gas stations or online.</p></div>
+        </div>
+        <div class="trans-item">
+          <div class="trans-icon">🚲</div>
+          <div class="trans-content"><h4>Cycling</h4><p>WienRadl in Vienna, many cities have bike-sharing. Helmets required for under-12. E-bikes are hugely popular. Use marked bike lanes.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RECYCLING GUIDE -->
+    <div class="card" data-section="recycling">
+      <div class="card-head">
+        <div class="card-icon" style="background:rgba(34,181,115,0.1);">♻️</div>
+        <h2>Recycling Guide</h2>
+      </div>
+      <div class="recycle-grid">
+        <div class="recycle-card rc-yellow">
+          <div class="recycle-icon">📦</div>
+          <div class="recycle-type">Gelbe Tonne (Yellow)</div>
+          <div class="recycle-items">Plastic bottles, cans, tetrapacks, plastic packaging, metal lids, aluminum foil</div>
+        </div>
+        <div class="recycle-card rc-blue">
+          <div class="recycle-icon">📄</div>
+          <div class="recycle-type">Blaue Tonne (Blue)</div>
+          <div class="recycle-items">Paper, cardboard, newspapers, magazines, paper bags, egg cartons</div>
+        </div>
+        <div class="recycle-card rc-green">
+          <div class="recycle-icon">🍶</div>
+          <div class="recycle-type">Grune Tonne (Green)</div>
+          <div class="recycle-items">Glass bottles (green & brown), jars — NO white glass, NO ceramics</div>
+        </div>
+        <div class="recycle-card rc-brown">
+          <div class="recycle-icon">🍂</div>
+          <div class="recycle-type">Biomull (Brown bin)</div>
+          <div class="recycle-items">Food scraps, fruit/veg peels, coffee grounds, garden waste, eggshells</div>
+        </div>
+        <div class="recycle-card rc-red">
+          <div class="recycle-icon">🔋</div>
+          <div class="recycle-type">Sondermüll (Special)</div>
+          <div class="recycle-items">Batteries, electronics, paint, chemicals — bring to designated drop-off points</div>
+        </div>
+        <div class="recycle-card rc-gray">
+          <div class="recycle-icon">🗑️</div>
+          <div class="recycle-type">Restmüll (Gray bin)</div>
+          <div class="recycle-items">Non-recyclable waste: dirty packaging, hygiene products, broken ceramics</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>Austria Life Companion — Made with love for Austria 🇦🇹</footer>
+</div>
+
+<script>
+const themeToggle = document.getElementById('themeToggle');
+function applyTheme(t){
+  document.body.setAttribute('data-theme', t);
+  try{ localStorage.setItem('alc_theme', t); }catch(e){}
+}
+applyTheme(localStorage.getItem('alc_theme') || 'light');
+themeToggle.addEventListener('click', ()=>{
+  const cur = document.body.getAttribute('data-theme');
+  applyTheme(cur === 'light' ? 'dark' : 'light');
+});
+
+const pills = document.querySelectorAll('.pill');
+const cards = document.querySelectorAll('.card[data-section]');
+pills.forEach(p=>{
+  p.addEventListener('click', ()=>{
+    pills.forEach(x=>x.classList.remove('active'));
+    p.classList.add('active');
+    const t = p.dataset.target;
+    cards.forEach(c=>{
+      c.style.display = (t === 'all' || c.dataset.section === t) ? '' : 'none';
+    });
+    document.querySelector('.grid').style.gridTemplateColumns = (t !== 'all') ? '1fr' : '';
+  });
+});
+
+/* ========== SCHOOL CALENDAR (daily updated, offline-ready) ========== */
+const SCHOOL_FALLBACK = [
+  {date:'26 Oct 2026', name:'Osterreichischer Nationalfeiertag', emoji:'🇦🇹', type:'holiday'},
+  {date:'27-31 Oct 2026', name:'Herbstferien', emoji:'🍂', type:'break'},
+  {date:'1 Nov 2026', name:'Allerheiligen', emoji:'🕯️', type:'holiday'},
+  {date:'2 Nov 2026', name:'Allerseelen', emoji:'👻', type:'break'},
+  {date:'8 Dec 2026', name:'Maria Empfangnis', emoji:'✨', type:'holiday'},
+  {date:'24 Dec 2026 - 6 Jan 2027', name:'Weihnachtsferien', emoji:'🎄', type:'break'},
+  {date:'25 Dec 2026', name:'Christtag', emoji:'🎁', type:'holiday'},
+  {date:'26 Dec 2026', name:'Stephanitag', emoji:'⛪', type:'holiday'},
+  {date:'1 Jan 2027', name:'Neujahr', emoji:'🎆', type:'holiday'},
+  {date:'6 Jan 2027', name:'Heilige Drei Konige', emoji:'👑', type:'holiday'},
+  {date:'20-29 Mar 2027', name:'Osterferien', emoji:'🐣', type:'break'},
+  {date:'29 Mar 2027', name:'Ostermontag', emoji:'✝️', type:'holiday'},
+  {date:'1 May 2027', name:'Staatsfeiertag', emoji:'🇦🇹', type:'holiday'},
+  {date:'6 May 2027', name:'Christi Himmelfahrt', emoji:'🕊️', type:'holiday'},
+  {date:'15-17 May 2027', name:'Pfingstferien', emoji:'🌿', type:'break'},
+  {date:'17 May 2027', name:'Pfingstmontag', emoji:'🕊️', type:'holiday'},
+  {date:'27 May 2027', name:'Fronleichnam', emoji:'⛪', type:'holiday'},
+  {date:'15 Aug 2027', name:'Maria Himmelfahrt', emoji:'🙏', type:'holiday'},
+];
+
+function renderSchoolList(data, badge, statusText){
+  document.getElementById('schoolBadge').textContent = badge;
+  document.getElementById('schoolStatus').textContent = statusText;
+  document.getElementById('schoolList').innerHTML = data.map(h=>{
+    const isH = h.type === 'holiday';
+    return '<div class="hol-item">'
+      + '<div class="hol-date" style="'+(isH?'background:rgba(226,35,26,0.08);color:#e2231a;':'background:rgba(45,91,255,0.08);color:#2d5bff;')+'">'+h.date+'</div>'
+      + '<div class="hol-name">'+h.name+'</div>'
+      + '<div class="hol-emoji">'+h.emoji+'</div>'
+      + '</div>';
+  }).join('');
+}
+
+/* Show cached data immediately, then try to update from network */
+function showCachedSchool(){
+  try{
+    const cached = JSON.parse(localStorage.getItem('alc_school_cache'));
+    if(cached && cached.data && cached.data.length){
+      renderSchoolList(cached.data, cached.badge || '2026/27', 'Cached data');
+    } else {
+      renderSchoolList(SCHOOL_FALLBACK, '2026/27', 'Fallback data');
+    }
+  }catch(e){
+    renderSchoolList(SCHOOL_FALLBACK, '2026/27', 'Fallback data');
+  }
+}
+
+async function loadSchoolCalendar(){
+  /* always show cached/fallback first for instant offline support */
+  showCachedSchool();
+  try{
+    const resp = await fetch('https://www.oesterreich.gv.at/de/themen/bildung_und_ausbildung/schulen/3/Seite.1100114');
+    const html = await resp.text();
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const rows = doc.querySelectorAll('table tr');
+    const data = [];
+    rows.forEach(row => {
+      const cells = row.querySelectorAll('td');
+      if(cells.length >= 2){
+        const dateText = cells[0].textContent.trim();
+        const rawName = cells[1].textContent.trim();
+        const isHoliday = rawName.includes('gesetzlicher Feiertag');
+        const cleanName = rawName
+          .replace(/\(gesetzlicher Feiertag\)/g,'')
+          .replace(/\(schulfrei in allen Bundesländern\)/g,'')
+          .trim();
+        data.push({
+          date: dateText,
+          name: cleanName,
+          emoji: isHoliday ? '🔴' : '🔵',
+          type: isHoliday ? 'holiday' : 'break'
+        });
+      }
+    });
+    if(data.length > 0){
+      renderSchoolList(data, '2026/27', 'Updated: ' + new Date().toLocaleTimeString() + ' (from oesterreich.gv.at)');
+      /* cache for offline use */
+      try{ localStorage.setItem('alc_school_cache', JSON.stringify({data:data, badge:'2026/27'})); }catch(e){}
+      return;
+    }
+    throw new Error('No data');
+  }catch(e){
+    console.log('School calendar fetch failed, using cached/fallback:', e);
+    /* cached/fallback already shown above */
+  }
+}
+loadSchoolCalendar();
+
+/* ========== CURRENCY CALCULATOR (live rates) ========== */
+let eurRates = {};
+let curMode = 'toEUR';
+
+const CUR_FLAGS = {
+  AED:'🇦🇪',AUD:'🇦🇺',BRL:'🇧🇷',CAD:'🇨🇦',CHF:'🇨🇭',CNY:'🇨🇳',CZK:'🇨🇿',
+  DKK:'🇩🇰',EGP:'🇪🇬',EUR:'🇪🇺',GBP:'🇬🇧',GHS:'🇬🇭',HKD:'🇭🇰',HRK:'🇭🇷',
+  HUF:'🇭🇺',IDR:'🇮🇩',ISK:'🇮🇸',INR:'🇮🇳',JPY:'🇯🇵',KES:'🇰🇪',KRW:'🇰🇷',
+  MXN:'🇲🇽',MYR:'🇲🇾',NGN:'🇳🇬',NOK:'🇳🇴',NZD:'🇳🇿',PHP:'🇵🇭',PKR:'🇵🇰',
+  PLN:'🇵🇱',RON:'🇷🇴',RSD:'🇷🇸',SAR:'🇸🇦',SEK:'🇸🇪',SGD:'🇸🇬',THB:'🇹🇭',
+  TRY:'🇹🇷',UAH:'🇺🇦',ZAR:'🇿🇦',BDT:'🇧🇩',BGN:'🇧🇬',VND:'🇻🇳'
+};
+
+const CUR_NAMES = {
+  AED:'UAE Dirham',AUD:'Australian Dollar',BRL:'Brazilian Real',CAD:'Canadian Dollar',
+  CHF:'Swiss Franc',CNY:'Chinese Yuan',CZK:'Czech Koruna',DKK:'Danish Krone',
+  EGP:'Egyptian Pound',EUR:'Euro',GBP:'British Pound',GHS:'Ghanaian Cedi',
+  HKD:'Hong Kong Dollar',HRK:'Croatian Kuna',HUF:'Hungarian Forint',
+  IDR:'Indonesian Rupiah',ISK:'Icelandic Krona',INR:'Indian Rupee',
+  JPY:'Japanese Yen',KES:'Kenyan Shilling',KRW:'South Korean Won',
+  MXN:'Mexican Peso',MYR:'Malaysian Ringgit',NGN:'Nigerian Naira',
+  NOK:'Norwegian Krone',NZD:'New Zealand Dollar',PHP:'Philippine Peso',
+  PKR:'Pakistani Rupee',PLN:'Polish Zloty',RON:'Romanian Leu',
+  RSD:'Serbian Dinar',SAR:'Saudi Riyal',SEK:'Swedish Krona',
+  SGD:'Singapore Dollar',THB:'Thai Baht',TRY:'Turkish Lira',
+  UAH:'Ukrainian Hryvnia',ZAR:'South African Rand',BDT:'Bangladeshi Taka',
+  BGN:'Bulgarian Lev',VND:'Vietnamese Dong'
+};
+
+function fmt(n){ return Number(n.toFixed(6)).toString(); }
+
+async function loadRates(){
+  const badge = document.getElementById('curBadge');
+  try{
+    const resp = await fetch('https://api.frankfurter.dev/v1/latest?from=EUR');
+    const data = await resp.json();
+    eurRates = data.rates;
+    eurRates.EUR = 1;
+    badge.textContent = 'Live: ' + new Date().toLocaleTimeString();
+    renderCurTable();
+    populateCurFrom();
+  }catch(e){
+    console.log('Currency fetch failed:', e);
+    badge.textContent = 'Offline — rates unavailable';
+  }
+}
+
+function populateCurFrom(){
+  const sel = document.getElementById('curFrom');
+  sel.innerHTML = Object.keys(eurRates).sort().map(c => {
+    const f = CUR_FLAGS[c]||'';
+    const n = CUR_NAMES[c]||c;
+    return '<option value="'+c+'">'+f+' '+c+' - '+n+'</option>';
+  }).join('');
+}
+
+function onCurModeChange(){
+  curMode = document.getElementById('curMode').value;
+  document.getElementById('curFromWrap').style.display = curMode === 'fromEUR' ? '' : 'none';
+  renderCurTable();
+}
+
+async function renderCurTable(){
+  const tbody = document.getElementById('curTbody');
+  const amount = parseFloat(document.getElementById('curAmount').value) || 0;
+
+  if(curMode === 'toEUR'){
+    tbody.innerHTML = Object.keys(eurRates).sort().map(code => {
+      const val = amount * eurRates[code];
+      const flag = CUR_FLAGS[code]||'';
+      const name = CUR_NAMES[code]||code;
+      return '<tr><td><strong>'+flag+' '+code+'</strong> <span style="color:var(--sub);font-size:11px;font-weight:400;">'+name+'</span></td><td style="text-align:right;font-weight:600;">'+fmt(val)+'</td></tr>';
+    }).join('');
+  } else {
+    const from = document.getElementById('curFrom').value;
+    if(!from || !eurRates[from]){
+      tbody.innerHTML = '<tr><td colspan="2" style="text-align:center;color:var(--sub);">Select a currency</td></tr>';
+      return;
+    }
+    try{
+      const resp = await fetch('https://api.frankfurter.dev/v1/latest?from=' + from + '&to=EUR');
+      const data = await resp.json();
+      const rate = data.rates.EUR;
+      const val = amount * rate;
+      const flag = CUR_FLAGS[from]||'';
+      const name = CUR_NAMES[from]||from;
+      tbody.innerHTML =
+        '<tr><td><strong>'+flag+' '+from+'</strong> <span style="color:var(--sub);font-size:11px;font-weight:400;">'+name+'</span></td><td style="text-align:right;font-weight:600;font-size:18px;">\u20AC '+fmt(val)+'</td></tr>'
+        + '<tr><td style="color:var(--sub);">1 '+from+'</td><td style="text-align:right;color:var(--sub);">\u20AC '+fmt(rate)+'</td></tr>';
+    }catch(e){
+      tbody.innerHTML = '<tr><td colspan="2" style="text-align:center;">Failed to fetch rate</td></tr>';
+    }
+  }
+}
+
+document.getElementById('curAmount').addEventListener('input', renderCurTable);
+document.getElementById('curFrom').addEventListener('change', renderCurTable);
+loadRates();
+setInterval(loadRates, 300000);
+setInterval(function(){
+  const b = document.getElementById('curBadge');
+  if(b) b.textContent = 'Live: ' + new Date().toLocaleTimeString();
+}, 1000);
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
+
+/* Offline detection: hide online-only sections */
+function updateOnlineStatus(){
+  const online=navigator.onLine;
+  const cu=document.getElementById('onlineCurrency');
+  if(cu)cu.style.display=online?'':'none';
+  /* show offline banner */
+  let banner=document.getElementById('offlineBanner');
+  if(!online){
+    if(!banner){
+      banner=document.createElement('div');
+      banner.id='offlineBanner';
+      banner.style.cssText='padding:12px 20px;margin-bottom:16px;border-radius:12px;background:#fef3c7;color:#92400e;font-size:13px;font-weight:600;text-align:center;border:1px solid #fde68a;';
+      banner.textContent='📡 You are offline — Currency Calculator is hidden. School Calendar works from cache. Everything else works normally.';
+      const hero=document.querySelector('.hero');
+      if(hero&&hero.parentNode)hero.parentNode.insertBefore(banner,hero.nextSibling);
+    }
+  }else if(banner){banner.remove();}
+}
+window.addEventListener('online',updateOnlineStatus);
+window.addEventListener('offline',updateOnlineStatus);
+updateOnlineStatus();
+</script>
+</body>
+</html>

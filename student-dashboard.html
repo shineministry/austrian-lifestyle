@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Dashboard ⭐</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#e2231a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Student Dashboard">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f2f4fb;
+    --bg-grad1:#eef1fb;
+    --bg-grad2:#f7eefc;
+    --card:#ffffff;
+    --text:#1c1f2e;
+    --sub:#6b7086;
+    --border:#e7e9f3;
+    --accent:#7c6cf0;
+    --accent2:#f0779c;
+    --accent3:#4fc3a1;
+    --accent4:#f4b942;
+    --shadow: 0 8px 24px rgba(60,60,120,0.08);
+    --radius:18px;
+  }
+  [data-theme="dark"]{
+    --bg:#12131c;
+    --bg-grad1:#14151f;
+    --bg-grad2:#191225;
+    --card:#1b1c29;
+    --text:#eef0fb;
+    --sub:#9297b3;
+    --border:#2a2c3d;
+    --shadow: 0 8px 24px rgba(0,0,0,0.35);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Inter',sans-serif;
+    color:var(--text);
+    background:linear-gradient(135deg,var(--bg-grad1),var(--bg-grad2));
+    min-height:100vh;
+    transition:background .3s,color .3s;
+    padding-bottom:60px;
+  }
+  h1,h2,h3{font-family:'Poppins',sans-serif;margin:0;}
+  .topbar{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:22px 34px;
+    position:sticky;top:0;z-index:50;
+    backdrop-filter:blur(10px);
+    background:rgba(255,255,255,0.55);
+    border-bottom:1px solid var(--border);
+  }
+  [data-theme="dark"] .topbar{background:rgba(20,20,30,0.6);}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand-icon{
+    width:42px;height:42px;border-radius:14px;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    display:flex;align-items:center;justify-content:center;font-size:22px;
+  }
+  .brand h1{font-size:20px;font-weight:700;}
+  .brand span{font-size:12px;color:var(--sub);font-weight:500;}
+  .top-right{display:flex;align-items:center;gap:16px;}
+  #clock{font-weight:600;font-size:14px;color:var(--sub);}
+  .toggle{
+    width:52px;height:28px;border-radius:20px;background:var(--border);
+    position:relative;cursor:pointer;transition:.3s;flex-shrink:0;
+  }
+  .toggle::after{
+    content:'☀️';font-size:14px;
+    position:absolute;top:2px;left:2px;width:24px;height:24px;border-radius:50%;
+    background:#fff;display:flex;align-items:center;justify-content:center;
+    transition:.3s;box-shadow:0 2px 6px rgba(0,0,0,0.2);
+  }
+  [data-theme="dark"] .toggle::after{transform:translateX(24px);content:'🌙';background:#2c2d3d;}
+
+  .container{max-width:1300px;margin:0 auto;padding:28px 34px;}
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(12,1fr);
+    gap:22px;
+  }
+  .card{
+    background:var(--card);border:1px solid var(--border);
+    border-radius:var(--radius);padding:22px;box-shadow:var(--shadow);
+    transition:.3s;
+  }
+  .card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+  .card-head h2{font-size:16px;display:flex;align-items:center;gap:8px;}
+  .badge{
+    font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;
+  }
+
+  /* spans */
+  .span-4{grid-column:span 4;}
+  .span-5{grid-column:span 5;}
+  .span-7{grid-column:span 7;}
+  .span-8{grid-column:span 8;}
+  .span-12{grid-column:span 12;}
+  .span-6{grid-column:span 6;}
+  .span-3{grid-column:span 3;}
+  .span-9{grid-column:span 9;}
+  @media(max-width:1000px){
+    .span-4,.span-5,.span-7,.span-8,.span-6,.span-3,.span-9{grid-column:span 12;}
+  }
+
+  /* countdown */
+  .countdown-card{
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    color:#fff;position:relative;overflow:hidden;
+  }
+  .countdown-card .card-head h2{color:#fff;}
+  .cd-label{font-size:13px;opacity:.85;font-weight:500;}
+  .cd-class{font-size:24px;font-weight:800;margin:4px 0 14px;font-family:'Poppins',sans-serif;}
+  .cd-timer{font-size:42px;font-weight:800;font-family:'Poppins',sans-serif;letter-spacing:1px;}
+  .cd-sub{font-size:12px;opacity:.8;margin-top:6px;}
+
+  /* timetable */
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{
+    text-align:left;color:var(--sub);font-weight:600;font-size:11px;
+    text-transform:uppercase;letter-spacing:.5px;padding:8px 6px;border-bottom:1px solid var(--border);
+  }
+  td{padding:10px 6px;border-bottom:1px solid var(--border);}
+  tr:last-child td{border-bottom:none;}
+  .tt-now td{background:rgba(124,108,240,0.08);border-radius:8px;}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;}
+  .tt-del{cursor:pointer;color:var(--sub);opacity:.5;transition:.2s;}
+  .tt-del:hover{opacity:1;color:#e5556a;}
+  .add-row{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap;}
+  .add-row input{flex:1;min-width:70px;}
+
+  input[type=text],input[type=time],input[type=number],input[type=date],select,textarea{
+    background:var(--bg);border:1px solid var(--border);color:var(--text);
+    border-radius:10px;padding:9px 12px;font-size:13px;font-family:inherit;outline:none;
+    transition:.2s;
+  }
+  input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+  button{
+    border:none;border-radius:10px;padding:9px 16px;font-weight:600;font-size:13px;
+    cursor:pointer;font-family:inherit;transition:.2s;
+  }
+  .btn-primary{background:var(--accent);color:#fff;}
+  .btn-primary:hover{filter:brightness(1.08);transform:translateY(-1px);}
+  .btn-ghost{background:var(--bg);color:var(--text);border:1px solid var(--border);}
+  .btn-ghost:hover{background:var(--border);}
+  .icon-btn{
+    background:none;border:none;cursor:pointer;font-size:16px;color:var(--sub);padding:2px 6px;
+  }
+  .icon-btn:hover{color:#e5556a;}
+
+  /* lists */
+  ul.plain{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;max-height:280px;overflow-y:auto;}
+  .item{
+    display:flex;align-items:center;gap:10px;background:var(--bg);
+    border:1px solid var(--border);border-radius:12px;padding:10px 12px;
+  }
+  .item.done{opacity:.5;}
+  .item.done .item-text{text-decoration:line-through;}
+  .item-text{flex:1;font-size:13.5px;}
+  .item-meta{font-size:11px;color:var(--sub);}
+  .chip{font-size:10px;padding:3px 8px;border-radius:20px;font-weight:700;}
+  .chip-high{background:#ffe3e6;color:#c23b52;}
+  .chip-med{background:#fff2d6;color:#a8720d;}
+  .chip-low{background:#dcf5e8;color:#1c8a5b;}
+  [data-theme="dark"] .chip-high{background:#3a1d24;color:#ff8fa3;}
+  [data-theme="dark"] .chip-med{background:#3a2f14;color:#ffcf6b;}
+  [data-theme="dark"] .chip-low{background:#123a29;color:#6be0a8;}
+  input[type=checkbox]{
+    width:18px;height:18px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;
+  }
+
+  /* pomodoro */
+  .pomo-wrap{display:flex;flex-direction:column;align-items:center;gap:14px;padding:6px 0 4px;}
+  .pomo-ring{position:relative;width:180px;height:180px;}
+  .pomo-ring svg{transform:rotate(-90deg);}
+  .pomo-ring circle{fill:none;stroke-width:10;}
+  .pomo-bg{stroke:var(--border);}
+  .pomo-fg{stroke:url(#pomoGrad);stroke-linecap:round;transition:stroke-dashoffset 1s linear;}
+  .pomo-time{
+    position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  }
+  .pomo-time .t{font-size:34px;font-weight:800;font-family:'Poppins',sans-serif;}
+  .pomo-time .m{font-size:11px;color:var(--sub);text-transform:uppercase;letter-spacing:1px;font-weight:700;}
+  .pomo-controls{display:flex;gap:10px;}
+  .pomo-modes{display:flex;gap:6px;margin-top:2px;}
+  .pomo-modes button{padding:5px 10px;font-size:11px;}
+  .pomo-modes button.active{background:var(--accent);color:#fff;}
+  .pomo-modes button:not(.active){background:var(--bg);color:var(--sub);}
+
+  /* goals */
+  .goal{margin-bottom:14px;}
+  .goal-top{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;}
+  .goal-top b{font-weight:600;}
+  .bar-track{background:var(--bg);border-radius:20px;height:10px;overflow:hidden;border:1px solid var(--border);}
+  .bar-fill{height:100%;border-radius:20px;background:linear-gradient(90deg,var(--accent3),#7fe3c0);transition:width .4s;}
+
+  /* stats */
+  .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+  .stat-box{
+    background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:16px;text-align:center;
+  }
+  .stat-box .num{font-size:26px;font-weight:800;font-family:'Poppins',sans-serif;}
+  .stat-box .lab{font-size:11px;color:var(--sub);margin-top:2px;font-weight:600;}
+  @media(max-width:700px){.stat-grid{grid-template-columns:repeat(2,1fr);}}
+
+  .bars{display:flex;align-items:flex-end;gap:10px;height:110px;margin-top:18px;}
+  .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;justify-content:flex-end;height:100%;}
+  .bar{
+    width:100%;border-radius:8px 8px 4px 4px;background:linear-gradient(180deg,var(--accent),var(--accent2));
+    transition:height .5s;
+  }
+  .bar-day{font-size:10px;color:var(--sub);font-weight:700;}
+
+  .empty{color:var(--sub);font-size:13px;text-align:center;padding:20px 0;}
+  ::-webkit-scrollbar{width:6px;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px;}
+  /* day schedule */
+  .ds-timeline-wrap{margin-bottom:14px;}
+  .ds-blocks{
+    position:relative;height:44px;background:var(--bg);border:1px solid var(--border);
+    border-radius:10px;overflow:visible;
+  }
+  .ds-block{
+    position:absolute;top:0;height:100%;display:flex;align-items:center;justify-content:center;
+    font-size:10px;font-weight:600;color:#fff;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap;padding:0 4px;
+    border-radius:4px;transition:opacity .2s;cursor:default;
+  }
+  .ds-block:hover{opacity:.85;}
+  .ds-now-line{
+    position:absolute;top:0;height:100%;width:2px;background:#e5556a;z-index:2;
+  }
+  .ds-now-line::after{
+    content:'';position:absolute;top:-4px;left:-3px;width:8px;height:8px;
+    background:#e5556a;border-radius:50%;
+  }
+  .ds-markers{
+    position:relative;height:18px;margin-top:4px;
+    font-size:9px;color:var(--sub);font-weight:600;
+  }
+  .ds-legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+  .ds-legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--sub);font-weight:500;}
+  .ds-legend-dot{width:10px;height:10px;border-radius:3px;}
+  footer{text-align:center;color:var(--sub);font-size:12px;margin-top:30px;}
+</style>
+</head>
+<body data-theme="light">
+
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-icon">🎓</div>
+    <div>
+      <h1>Student Dashboard</h1>
+      <span id="dateLine">Loading date...</span>
+    </div>
+  </div>
+  <div class="top-right">
+    <span id="clock">--:--:--</span>
+    <div class="toggle" id="themeToggle" title="Toggle dark mode"></div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="grid">
+
+    <!-- Countdown -->
+    <div class="card countdown-card span-4">
+      <div class="card-head"><h2>⏰ Class Countdown</h2></div>
+      <div class="cd-label" id="cdStatus">Next class</div>
+      <div class="cd-class" id="cdClassName">No classes yet</div>
+      <div class="cd-timer" id="cdTimer">--:--:--</div>
+      <div class="cd-sub" id="cdSub">Add a timetable to get started</div>
+    </div>
+
+    <!-- Pomodoro -->
+    <div class="card span-4">
+      <div class="card-head"><h2>📖 Study Timer</h2><span class="badge" id="pomoRound">Round 1</span></div>
+      <div class="pomo-wrap">
+        <div class="pomo-ring">
+          <svg width="180" height="180">
+            <defs>
+              <linearGradient id="pomoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#7c6cf0"/>
+                <stop offset="100%" stop-color="#f0779c"/>
+              </linearGradient>
+            </defs>
+            <circle class="pomo-bg" cx="90" cy="90" r="78"></circle>
+            <circle class="pomo-fg" id="pomoCircle" cx="90" cy="90" r="78"></circle>
+          </svg>
+          <div class="pomo-time">
+            <div class="t" id="pomoTime">25:00</div>
+            <div class="m" id="pomoMode">FOCUS</div>
+          </div>
+        </div>
+        <div class="pomo-modes">
+          <button class="active" data-mode="focus" onclick="setPomoMode('focus')">Focus 25</button>
+          <button data-mode="short" onclick="setPomoMode('short')">Short 5</button>
+          <button data-mode="long" onclick="setPomoMode('long')">Long 15</button>
+        </div>
+        <div class="pomo-controls">
+          <button class="btn-primary" id="pomoStartBtn" onclick="togglePomo()">▶ Start</button>
+          <button class="btn-ghost" onclick="resetPomo()">↺ Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Goals -->
+    <div class="card span-4">
+      <div class="card-head"><h2>🎯 Goals</h2></div>
+      <div id="goalsList"></div>
+      <div class="add-row">
+        <input type="text" id="goalInput" placeholder="New goal...">
+        <input type="number" id="goalTarget" placeholder="Target" style="width:70px" min="1" value="10">
+        <button class="btn-primary" onclick="addGoal()">Add</button>
+      </div>
+    </div>
+
+    <!-- Full Day Schedule -->
+    <div class="card span-12">
+      <div class="card-head"><h2>🗓️ Full Day Schedule</h2>
+        <select id="dsDayFilter" onchange="renderDaySchedule()"></select>
+      </div>
+      <div class="ds-legend" id="dsLegend"></div>
+      <div class="ds-timeline-wrap" id="dsTimeline"></div>
+      <table>
+        <thead><tr><th>From</th><th>To</th><th>Activity</th><th>Category</th><th>Day</th><th></th></tr></thead>
+        <tbody id="dsBody"></tbody>
+      </table>
+      <div class="add-row">
+        <input type="time" id="dsFrom" style="width:100px">
+        <input type="time" id="dsTo" style="width:100px">
+        <input type="text" id="dsActivity" placeholder="Activity">
+        <select id="dsCategory">
+          <option>Morning</option><option>Study</option><option>Meals</option><option>Exercise</option><option>School</option><option>Leisure</option><option>Sleep</option><option>Other</option>
+        </select>
+        <select id="dsDay">
+          <option>Mon</option><option>Tue</option><option>Wed</option><option>Thu</option><option>Fri</option><option>Sat</option><option>Sun</option>
+        </select>
+        <button class="btn-primary" onclick="addDayActivity()">+ Add</button>
+      </div>
+    </div>
+
+    <!-- Timetable -->
+    <div class="card span-7">
+      <div class="card-head"><h2>📅 Daily Timetable</h2>
+        <select id="ttDayFilter" onchange="renderTimetable()"></select>
+      </div>
+      <table>
+        <thead><tr><th>Time</th><th>Subject</th><th>Room</th><th>Day</th><th></th></tr></thead>
+        <tbody id="ttBody"></tbody>
+      </table>
+      <div class="add-row">
+        <input type="time" id="ttTime" style="width:110px">
+        <input type="text" id="ttSubject" placeholder="Subject">
+        <input type="text" id="ttRoom" placeholder="Room" style="width:80px">
+        <select id="ttDay">
+          <option>Mon</option><option>Tue</option><option>Wed</option><option>Thu</option><option>Fri</option><option>Sat</option><option>Sun</option>
+        </select>
+        <button class="btn-primary" onclick="addClass()">+ Add</button>
+      </div>
+    </div>
+
+    <!-- Homework -->
+    <div class="card span-5">
+      <div class="card-head"><h2>📚 Homework & Assignments</h2><span class="badge" id="hwBadge">0 due</span></div>
+      <ul class="plain" id="hwList"></ul>
+      <div class="add-row">
+        <input type="text" id="hwInput" placeholder="Assignment...">
+        <input type="date" id="hwDate" style="width:135px">
+        <select id="hwPriority">
+          <option value="low">Low</option><option value="med" selected>Med</option><option value="high">High</option>
+        </select>
+        <button class="btn-primary" onclick="addHomework()">Add</button>
+      </div>
+    </div>
+
+    <!-- To-do -->
+    <div class="card span-5">
+      <div class="card-head"><h2>✅ To-Do List</h2><span class="badge" id="todoBadge">0 left</span></div>
+      <ul class="plain" id="todoList"></ul>
+      <div class="add-row">
+        <input type="text" id="todoInput" placeholder="Add a task...">
+        <button class="btn-primary" onclick="addTodo()">Add</button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="card span-7">
+      <div class="card-head"><h2>📊 Progress Statistics</h2></div>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="num" id="statTasksDone">0</div><div class="lab">Tasks Done</div></div>
+        <div class="stat-box"><div class="num" id="statHwDone">0</div><div class="lab">Homework Done</div></div>
+        <div class="stat-box"><div class="num" id="statPomos">0</div><div class="lab">Focus Sessions</div></div>
+        <div class="stat-box"><div class="num" id="statStreak">0</div><div class="lab">Day Streak</div></div>
+      </div>
+      <div class="bars" id="barsChart"></div>
+    </div>
+
+  </div>
+  <footer>Made for you 💜 Your data is saved automatically in this browser.</footer>
+</div>
+
+<script>
+/* ---------- Storage helpers ---------- */
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+
+/* ---------- Theme ---------- */
+const themeToggle = document.getElementById('themeToggle');
+function applyTheme(t){
+  document.body.setAttribute('data-theme', t);
+  store.set('theme', t);
+}
+applyTheme(store.get('theme','light'));
+themeToggle.addEventListener('click', ()=>{
+  const cur = document.body.getAttribute('data-theme');
+  applyTheme(cur === 'light' ? 'dark' : 'light');
+});
+
+/* ---------- Clock ---------- */
+function updateClock(){
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('dateLine').textContent = now.toLocaleDateString([], {weekday:'long', month:'long', day:'numeric'});
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+/* ---------- Timetable ---------- */
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+let timetable = store.get('timetable', [
+  {time:'08:00', subject:'Mathematics', room:'201', day:'Mon'},
+  {time:'09:30', subject:'Physics', room:'Lab 2', day:'Mon'},
+  {time:'08:00', subject:'English Literature', room:'105', day:'Tue'},
+  {time:'11:00', subject:'Chemistry', room:'Lab 1', day:'Wed'},
+  {time:'13:00', subject:'History', room:'302', day:'Thu'},
+]);
+const dayFilter = document.getElementById('ttDayFilter');
+dayFilter.innerHTML = '<option value="all">All days</option>' + DAYS.map(d=>`<option value="${d}">${d}</option>`).join('');
+const todayShort = DAYS[(new Date().getDay()+6)%7];
+dayFilter.value = todayShort;
+
+const dayColors = {Mon:'#7c6cf0',Tue:'#f0779c',Wed:'#4fc3a1',Thu:'#f4b942',Fri:'#5aa9e6',Sat:'#c17ae0',Sun:'#e5556a'};
+
+function saveTimetable(){ store.set('timetable', timetable); renderTimetable(); updateCountdown(); }
+
+function renderTimetable(){
+  const filter = dayFilter.value;
+  const body = document.getElementById('ttBody');
+  let rows = timetable.filter(c => filter==='all' || c.day===filter);
+  rows.sort((a,b)=> a.time.localeCompare(b.time));
+  if(rows.length===0){
+    body.innerHTML = `<tr><td colspan="5" class="empty">No classes scheduled ✨</td></tr>`;
+    return;
+  }
+  const nowMin = timeToMin(new Date().toTimeString().slice(0,5));
+  body.innerHTML = rows.map((c)=>{
+    const idx = timetable.indexOf(c);
+    const isNow = c.day===todayShort && Math.abs(timeToMin(c.time)-nowMin) < 60 && timeToMin(c.time) <= nowMin;
+    return `<tr class="${isNow?'tt-now':''}">
+      <td>${c.time}</td>
+      <td><span class="dot" style="background:${dayColors[c.day]}"></span>${c.subject}</td>
+      <td>${c.room||'-'}</td>
+      <td>${c.day}</td>
+      <td><span class="tt-del" onclick="deleteClass(${idx})">✕</span></td>
+    </tr>`;
+  }).join('');
+}
+function timeToMin(t){ const [h,m] = t.split(':').map(Number); return h*60+m; }
+
+function addClass(){
+  const time = document.getElementById('ttTime').value;
+  const subject = document.getElementById('ttSubject').value.trim();
+  const room = document.getElementById('ttRoom').value.trim();
+  const day = document.getElementById('ttDay').value;
+  if(!time || !subject) return;
+  timetable.push({time,subject,room,day});
+  document.getElementById('ttSubject').value='';
+  document.getElementById('ttRoom').value='';
+  saveTimetable();
+}
+function deleteClass(i){ timetable.splice(i,1); saveTimetable(); }
+renderTimetable();
+
+/* ---------- Full Day Schedule ---------- */
+const catColors = {Morning:'#f4b942', Study:'#7c6cf0', Meals:'#4fc3a1', Exercise:'#f0779c', School:'#5aa9e6', Leisure:'#c17ae0', Sleep:'#6b7086', Other:'#e5556a'};
+let daySchedule = store.get('daySchedule', [
+  {from:'06:00', to:'06:15', activity:'Wake Up & Freshen Up', category:'Morning', day:'Mon'},
+  {from:'06:15', to:'06:45', activity:'Morning Exercise', category:'Exercise', day:'Mon'},
+  {from:'06:45', to:'07:15', activity:'Breakfast', category:'Meals', day:'Mon'},
+  {from:'07:15', to:'07:45', activity:'Get Ready for School', category:'Morning', day:'Mon'},
+  {from:'08:00', to:'13:00', activity:'School Classes', category:'School', day:'Mon'},
+  {from:'13:00', to:'13:30', activity:'Lunch', category:'Meals', day:'Mon'},
+  {from:'13:30', to:'14:00', activity:'Rest & Free Time', category:'Leisure', day:'Mon'},
+  {from:'14:00', to:'16:00', activity:'Study / Homework', category:'Study', day:'Mon'},
+  {from:'16:00', to:'17:00', activity:'Free Time / Hobbies', category:'Leisure', day:'Mon'},
+  {from:'17:00', to:'18:00', activity:'Sports / Outdoor', category:'Exercise', day:'Mon'},
+  {from:'18:00', to:'18:30', activity:'Dinner', category:'Meals', day:'Mon'},
+  {from:'18:30', to:'20:00', activity:'Revision / Reading', category:'Study', day:'Mon'},
+  {from:'20:00', to:'21:00', activity:'Leisure / Family Time', category:'Leisure', day:'Mon'},
+  {from:'21:00', to:'21:30', activity:'Night Routine', category:'Morning', day:'Mon'},
+]);
+const dsDayFilter = document.getElementById('dsDayFilter');
+dsDayFilter.innerHTML = '<option value="all">All days</option>' + DAYS.map(d=>`<option value="${d}">${d}</option>`).join('');
+dsDayFilter.value = todayShort;
+
+function saveDaySchedule(){ store.set('daySchedule', daySchedule); renderDaySchedule(); }
+
+function renderDaySchedule(){
+  const filter = dsDayFilter.value;
+  const body = document.getElementById('dsBody');
+  const timeline = document.getElementById('dsTimeline');
+  const legend = document.getElementById('dsLegend');
+
+  legend.innerHTML = Object.entries(catColors).map(([cat,color])=>
+    `<div class="ds-legend-item"><div class="ds-legend-dot" style="background:${color}"></div>${cat}</div>`
+  ).join('');
+
+  let rows = daySchedule.filter(a => filter==='all' || a.day===filter);
+  rows.sort((a,b)=> a.from.localeCompare(b.from));
+
+  const dayStart = 6 * 60;
+  const dayEnd = 23 * 60;
+  const totalMin = dayEnd - dayStart;
+
+  let blocks = '';
+  rows.forEach(a => {
+    const fromMin = timeToMin(a.from);
+    const toMin = timeToMin(a.to);
+    const left = ((fromMin - dayStart) / totalMin * 100);
+    const width = ((toMin - fromMin) / totalMin * 100);
+    if(left + width <= 0 || left >= 100 || width <= 0) return;
+    const cLeft = Math.max(0, left);
+    const cWidth = Math.min(100 - cLeft, width);
+    blocks += `<div class="ds-block" style="left:${cLeft}%;width:${cWidth}%;background:${catColors[a.category]||'#999'}" title="${a.from}-${a.to} ${a.activity}">${cWidth > 6 ? a.activity : ''}</div>`;
+  });
+
+  const now = new Date();
+  const nowMin = now.getHours()*60 + now.getMinutes();
+  const nowPct = ((nowMin - dayStart) / totalMin * 100);
+  let nowHtml = '';
+  if(nowPct >= 0 && nowPct <= 100){
+    nowHtml = `<div class="ds-now-line" style="left:${nowPct}%"></div>`;
+  }
+
+  let markers = '';
+  for(let h = 6; h <= 23; h += 2){
+    const pos = ((h*60 - dayStart) / totalMin * 100);
+    markers += `<span style="position:absolute;left:${pos}%;transform:translateX(-50%)">${h}:00</span>`;
+  }
+
+  timeline.innerHTML = `<div class="ds-blocks">${blocks}${nowHtml}</div><div class="ds-markers">${markers}</div>`;
+
+  if(rows.length===0){
+    body.innerHTML = `<tr><td colspan="6" class="empty">No activities scheduled</td></tr>`;
+    return;
+  }
+  const nowMinVal = timeToMin(new Date().toTimeString().slice(0,5));
+  body.innerHTML = rows.map((a)=>{
+    const idx = daySchedule.indexOf(a);
+    const isActive = a.day===todayShort && timeToMin(a.from) <= nowMinVal && timeToMin(a.to) > nowMinVal;
+    return `<tr class="${isActive?'tt-now':''}">
+      <td>${a.from}</td>
+      <td>${a.to}</td>
+      <td><span class="dot" style="background:${catColors[a.category]||'#999'}"></span>${a.activity}</td>
+      <td>${a.category}</td>
+      <td>${a.day}</td>
+      <td><span class="tt-del" onclick="deleteDayActivity(${idx})">✕</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function addDayActivity(){
+  const from = document.getElementById('dsFrom').value;
+  const to = document.getElementById('dsTo').value;
+  const activity = document.getElementById('dsActivity').value.trim();
+  const category = document.getElementById('dsCategory').value;
+  const day = document.getElementById('dsDay').value;
+  if(!from || !to || !activity) return;
+  daySchedule.push({from, to, activity, category, day});
+  document.getElementById('dsActivity').value='';
+  saveDaySchedule();
+}
+
+function deleteDayActivity(i){ daySchedule.splice(i,1); saveDaySchedule(); }
+document.getElementById('dsActivity').addEventListener('keypress', e=>{ if(e.key==='Enter') addDayActivity(); });
+
+renderDaySchedule();
+setInterval(()=>{
+  const nowLine = document.querySelector('.ds-now-line');
+  if(!nowLine) return;
+  const now = new Date();
+  const nMin = now.getHours()*60 + now.getMinutes();
+  const pct = ((nMin - 6*60) / (23*60 - 6*60) * 100);
+  if(pct >= 0 && pct <= 100) nowLine.style.left = pct + '%';
+}, 60000);
+
+/* ---------- Countdown ---------- */
+const SCHOOL_START = new Date(2026, 8, 14, 0, 0, 0); // Sept 14, 2026 (Monday)
+
+function getNextClass(){
+  const now = new Date();
+  const nowMin = now.getHours()*60+now.getMinutes();
+  const todayIdx = (now.getDay()+6)%7;
+  for(let offset=0; offset<8; offset++){
+    const dIdx = (todayIdx+offset)%7;
+    const dayName = DAYS[dIdx];
+    let classes = timetable.filter(c=>c.day===dayName);
+    if(offset===0) classes = classes.filter(c=>timeToMin(c.time) > nowMin);
+    classes.sort((a,b)=>a.time.localeCompare(b.time));
+    if(classes.length){
+      const c = classes[0];
+      const target = new Date(now);
+      target.setDate(now.getDate()+offset);
+      const [h,m] = c.time.split(':').map(Number);
+      target.setHours(h,m,0,0);
+      return {c, target, offset};
+    }
+  }
+  return null;
+}
+function updateCountdown(){
+  const nameEl = document.getElementById('cdClassName');
+  const timerEl = document.getElementById('cdTimer');
+  const subEl = document.getElementById('cdSub');
+  const statusEl = document.getElementById('cdStatus');
+
+  const now = new Date();
+  if(now < SCHOOL_START){
+    const diff = SCHOOL_START - now;
+    const days = Math.floor(diff/86400000);
+    const h = Math.floor((diff%86400000)/3600000);
+    const m = Math.floor((diff%3600000)/60000);
+    const s = Math.floor((diff%60000)/1000);
+    statusEl.textContent = 'School starts in';
+    nameEl.textContent = 'First Day of School 🎒';
+    timerEl.textContent = `${days}d ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    subEl.textContent = 'Monday, September 14, 2026';
+    return;
+  }
+
+  const next = getNextClass();
+  if(!next){
+    nameEl.textContent = 'No classes yet';
+    timerEl.textContent = '--:--:--';
+    subEl.textContent = 'Add a timetable to get started';
+    return;
+  }
+  const diff = Math.max(0, next.target - new Date());
+  const h = Math.floor(diff/3600000);
+  const m = Math.floor((diff%3600000)/60000);
+  const s = Math.floor((diff%60000)/1000);
+  statusEl.textContent = next.offset===0 ? 'Next class today' : 'Next class';
+  nameEl.textContent = `${next.c.subject}${next.c.room? ' · '+next.c.room:''}`;
+  timerEl.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  subEl.textContent = `${next.c.day} at ${next.c.time}`;
+}
+updateCountdown();
+setInterval(updateCountdown, 1000);
+
+/* ---------- Homework ---------- */
+let homework = store.get('homework', [
+  {text:'Read Chapter 5 - Biology', due:'', priority:'med', done:false},
+  {text:'Essay draft - History', due:'', priority:'high', done:false},
+]);
+function saveHomework(){ store.set('homework', homework); renderHomework(); renderStats(); }
+function renderHomework(){
+  const list = document.getElementById('hwList');
+  if(homework.length===0){ list.innerHTML = '<div class="empty">No homework 🎉</div>'; }
+  else{
+    list.innerHTML = homework.map((h,i)=>`
+      <li class="item ${h.done?'done':''}">
+        <input type="checkbox" ${h.done?'checked':''} onchange="toggleHw(${i})">
+        <div style="flex:1">
+          <div class="item-text">${h.text}</div>
+          <div class="item-meta">${h.due? 'Due '+h.due : 'No due date'}</div>
+        </div>
+        <span class="chip chip-${h.priority}">${h.priority.toUpperCase()}</span>
+        <button class="icon-btn" onclick="deleteHw(${i})">✕</button>
+      </li>`).join('');
+  }
+  document.getElementById('hwBadge').textContent = homework.filter(h=>!h.done).length + ' due';
+}
+function addHomework(){
+  const text = document.getElementById('hwInput').value.trim();
+  const due = document.getElementById('hwDate').value;
+  const priority = document.getElementById('hwPriority').value;
+  if(!text) return;
+  homework.push({text,due,priority,done:false});
+  document.getElementById('hwInput').value='';
+  saveHomework();
+}
+function toggleHw(i){ homework[i].done = !homework[i].done; saveHomework(); }
+function deleteHw(i){ homework.splice(i,1); saveHomework(); }
+renderHomework();
+
+/* ---------- To-do ---------- */
+let todos = store.get('todos', [
+  {text:'Pack bag for tomorrow', done:false},
+  {text:'Review flashcards', done:true},
+]);
+function saveTodos(){ store.set('todos', todos); renderTodos(); renderStats(); }
+function renderTodos(){
+  const list = document.getElementById('todoList');
+  if(todos.length===0){ list.innerHTML = '<div class="empty">Nothing to do 🌤️</div>'; }
+  else{
+    list.innerHTML = todos.map((t,i)=>`
+      <li class="item ${t.done?'done':''}">
+        <input type="checkbox" ${t.done?'checked':''} onchange="toggleTodo(${i})">
+        <div class="item-text">${t.text}</div>
+        <button class="icon-btn" onclick="deleteTodo(${i})">✕</button>
+      </li>`).join('');
+  }
+  document.getElementById('todoBadge').textContent = todos.filter(t=>!t.done).length + ' left';
+}
+function addTodo(){
+  const input = document.getElementById('todoInput');
+  const text = input.value.trim();
+  if(!text) return;
+  todos.push({text, done:false});
+  input.value='';
+  saveTodos();
+}
+document.getElementById('todoInput').addEventListener('keypress', e=>{ if(e.key==='Enter') addTodo(); });
+document.getElementById('hwInput').addEventListener('keypress', e=>{ if(e.key==='Enter') addHomework(); });
+document.getElementById('goalInput').addEventListener('keypress', e=>{ if(e.key==='Enter') addGoal(); });
+function toggleTodo(i){ todos[i].done = !todos[i].done; saveTodos(); }
+function deleteTodo(i){ todos.splice(i,1); saveTodos(); }
+renderTodos();
+
+/* ---------- Goals ---------- */
+let goals = store.get('goals', [
+  {text:'Finish 10 practice tests', target:10, progress:4},
+  {text:'Read 5 chapters this week', target:5, progress:2},
+]);
+function saveGoals(){ store.set('goals', goals); renderGoals(); }
+function renderGoals(){
+  const el = document.getElementById('goalsList');
+  if(goals.length===0){ el.innerHTML = '<div class="empty">No goals set</div>'; return; }
+  el.innerHTML = goals.map((g,i)=>{
+    const pct = Math.min(100, Math.round((g.progress/g.target)*100));
+    return `<div class="goal">
+      <div class="goal-top"><span>${g.text}</span><b>${g.progress}/${g.target}</b></div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+      <div style="display:flex;gap:6px;margin-top:6px;">
+        <button class="btn-ghost" style="padding:3px 10px;font-size:11px" onclick="bumpGoal(${i},-1)">−</button>
+        <button class="btn-ghost" style="padding:3px 10px;font-size:11px" onclick="bumpGoal(${i},1)">+</button>
+        <button class="icon-btn" style="margin-left:auto" onclick="deleteGoal(${i})">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function addGoal(){
+  const text = document.getElementById('goalInput').value.trim();
+  const target = parseInt(document.getElementById('goalTarget').value) || 10;
+  if(!text) return;
+  goals.push({text, target, progress:0});
+  document.getElementById('goalInput').value='';
+  saveGoals();
+}
+function bumpGoal(i, delta){
+  goals[i].progress = Math.max(0, Math.min(goals[i].target, goals[i].progress+delta));
+  saveGoals();
+}
+function deleteGoal(i){ goals.splice(i,1); saveGoals(); }
+renderGoals();
+
+/* ---------- Pomodoro ---------- */
+const pomoDurations = {focus:25*60, short:5*60, long:15*60};
+let pomoMode = 'focus';
+let pomoSeconds = pomoDurations.focus;
+let pomoRunning = false;
+let pomoInterval = null;
+let pomoRoundCount = store.get('pomoRounds', 0);
+document.getElementById('pomoRound').textContent = 'Round ' + (pomoRoundCount+1);
+
+const CIRC = 2*Math.PI*78;
+const circleEl = document.getElementById('pomoCircle');
+circleEl.style.strokeDasharray = CIRC;
+function renderPomo(){
+  const total = pomoDurations[pomoMode];
+  const m = Math.floor(pomoSeconds/60), s = pomoSeconds%60;
+  document.getElementById('pomoTime').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  document.getElementById('pomoMode').textContent = pomoMode==='focus'?'FOCUS':(pomoMode==='short'?'SHORT BREAK':'LONG BREAK');
+  const pct = pomoSeconds/total;
+  circleEl.style.strokeDashoffset = CIRC * (1-pct);
+}
+function setPomoMode(mode){
+  pomoMode = mode; pomoSeconds = pomoDurations[mode];
+  document.querySelectorAll('.pomo-modes button').forEach(b=>b.classList.toggle('active', b.dataset.mode===mode));
+  pauseP();
+  renderPomo();
+}
+function togglePomo(){ pomoRunning ? pauseP() : startP(); }
+function startP(){
+  pomoRunning = true;
+  document.getElementById('pomoStartBtn').textContent = '⏸ Pause';
+  pomoInterval = setInterval(()=>{
+    pomoSeconds--;
+    if(pomoSeconds <= 0){
+      if(pomoMode==='focus'){
+        pomoRoundCount++;
+        store.set('pomoRounds', pomoRoundCount);
+        document.getElementById('pomoRound').textContent = 'Round ' + (pomoRoundCount+1);
+        renderStats();
+      }
+      pauseP();
+      pomoSeconds = 0;
+      renderPomo();
+      setTimeout(()=>{ setPomoMode(pomoMode==='focus' ? 'short' : 'focus'); }, 600);
+      return;
+    }
+    renderPomo();
+  }, 1000);
+}
+function pauseP(){
+  pomoRunning = false;
+  clearInterval(pomoInterval);
+  document.getElementById('pomoStartBtn').textContent = '▶ Start';
+}
+function resetPomo(){ pauseP(); pomoSeconds = pomoDurations[pomoMode]; renderPomo(); }
+renderPomo();
+
+/* ---------- Stats ---------- */
+function renderStats(){
+  document.getElementById('statTasksDone').textContent = todos.filter(t=>t.done).length;
+  document.getElementById('statHwDone').textContent = homework.filter(h=>h.done).length;
+  document.getElementById('statPomos').textContent = pomoRoundCount;
+  const streak = store.get('streak', 1);
+  document.getElementById('statStreak').textContent = streak;
+
+  // simple weekly bar chart based on homework+todo completion distributed randomly-ish but deterministic by day
+  const chart = document.getElementById('barsChart');
+  const doneTotal = todos.filter(t=>t.done).length + homework.filter(h=>h.done).length;
+  const base = [3,5,2,6,4,1,2];
+  const maxV = Math.max(...base, doneTotal, 1);
+  chart.innerHTML = DAYS.map((d,i)=>{
+    const val = i === ((new Date().getDay()+6)%7) ? Math.max(base[i], doneTotal) : base[i];
+    const h = Math.round((val/maxV)*90)+10;
+    return `<div class="bar-col"><div class="bar" style="height:${h}px"></div><div class="bar-day">${d}</div></div>`;
+  }).join('');
+}
+renderStats();
+
+/* ---------- Streak tracking ---------- */
+(function trackStreak(){
+  const today = new Date().toDateString();
+  const last = store.get('lastVisit', null);
+  let streak = store.get('streak', 1);
+  if(last !== today){
+    const y = new Date(); y.setDate(y.getDate()-1);
+    streak = (last === y.toDateString()) ? streak+1 : 1;
+    store.set('streak', streak);
+    store.set('lastVisit', today);
+  }
+})();
+renderStats();
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
+</script>
+</body>
+</html>
