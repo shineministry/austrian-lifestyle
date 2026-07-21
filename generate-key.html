@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>S.K.M. Document Authenticator — Generate</title>
+<style>
+  :root{
+    --bg-1:#0a0f0d;
+    --bg-2:#0f1712;
+    --forest:#1b3a2b;
+    --forest-2:#274d38;
+    --gold:#c9a227;
+    --gold-2:#e6c65c;
+    --burgundy:#5c1a2b;
+    --text:#eae7dc;
+    --muted:#9fae9f;
+    --glass:rgba(255,255,255,0.045);
+    --glass-border:rgba(201,162,39,0.25);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    min-height:100vh;
+    font-family:'Georgia','Times New Roman',serif;
+    background:
+      radial-gradient(circle at 15% 20%, rgba(39,77,56,0.35), transparent 45%),
+      radial-gradient(circle at 85% 80%, rgba(92,26,43,0.28), transparent 50%),
+      linear-gradient(160deg, var(--bg-1), var(--bg-2));
+    color:var(--text);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:32px 16px;
+  }
+  .wrap{width:100%;max-width:640px;}
+  .card{
+    background:var(--glass);
+    border:1px solid var(--glass-border);
+    border-radius:18px;
+    backdrop-filter:blur(14px);
+    box-shadow:0 20px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.04);
+    overflow:hidden;
+  }
+  .card-header{
+    padding:28px 32px 20px;
+    border-bottom:1px solid var(--glass-border);
+    text-align:center;
+    background:linear-gradient(180deg, rgba(201,162,39,0.06), transparent);
+  }
+  .crest{
+    width:52px;height:52px;margin:0 auto 12px;
+    border:2px solid var(--gold);
+    border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:20px;color:var(--gold-2);
+    font-family:'Trajan Pro','Georgia',serif;
+    letter-spacing:1px;
+  }
+  h1{
+    font-size:20px;
+    margin:0 0 4px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    color:var(--gold-2);
+    font-weight:600;
+  }
+  .sub{
+    color:var(--muted);
+    font-size:12.5px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+  }
+  .body-pad{padding:28px 32px 32px;}
+  label{
+    display:block;
+    font-size:11.5px;
+    letter-spacing:1.2px;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin:16px 0 6px;
+  }
+  label:first-child{margin-top:0;}
+  input, select, textarea{
+    width:100%;
+    padding:11px 13px;
+    background:rgba(0,0,0,0.28);
+    border:1px solid rgba(201,162,39,0.22);
+    border-radius:8px;
+    color:var(--text);
+    font-family:inherit;
+    font-size:14.5px;
+    outline:none;
+    transition:border-color .2s, box-shadow .2s;
+  }
+  input:focus, select:focus, textarea:focus{
+    border-color:var(--gold);
+    box-shadow:0 0 0 3px rgba(201,162,39,0.12);
+  }
+  textarea{resize:vertical;min-height:60px;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  button{
+    margin-top:24px;
+    width:100%;
+    padding:14px;
+    border:none;
+    border-radius:9px;
+    background:linear-gradient(135deg, var(--gold), #a9821f);
+    color:#111;
+    font-weight:700;
+    font-size:14px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    cursor:pointer;
+    transition:transform .15s, box-shadow .15s;
+    font-family:'Helvetica Neue',Arial,sans-serif;
+  }
+  button:hover{transform:translateY(-1px); box-shadow:0 8px 24px rgba(201,162,39,0.3);}
+  button:active{transform:translateY(0);}
+
+  .result{
+    margin-top:26px;
+    display:none;
+  }
+  .result.show{display:block;}
+  .cert{
+    border:1px solid var(--gold);
+    border-radius:14px;
+    padding:26px;
+    background:
+      linear-gradient(160deg, rgba(39,77,56,0.35), rgba(92,26,43,0.18)),
+      rgba(0,0,0,0.25);
+    position:relative;
+    overflow:hidden;
+  }
+  .cert::before{
+    content:"";
+    position:absolute;
+    inset:6px;
+    border:1px solid rgba(201,162,39,0.35);
+    border-radius:9px;
+    pointer-events:none;
+  }
+  .cert-title{
+    text-align:center;
+    font-size:12px;
+    letter-spacing:3px;
+    text-transform:uppercase;
+    color:var(--gold-2);
+    margin-bottom:14px;
+  }
+  .doc-no{
+    text-align:center;
+    font-family:'Courier New',monospace;
+    font-size:28px;
+    letter-spacing:6px;
+    font-weight:700;
+    color:var(--gold-2);
+    background:rgba(0,0,0,0.35);
+    border-radius:10px;
+    padding:14px 8px;
+    margin:6px 0 18px;
+    border:1px dashed rgba(201,162,39,0.4);
+    word-break:break-all;
+  }
+  .field{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    padding:9px 0;
+    border-bottom:1px solid rgba(255,255,255,0.06);
+    font-size:13.5px;
+  }
+  .field:last-child{border-bottom:none;}
+  .field .k{color:var(--muted); letter-spacing:.5px;}
+  .field .v{color:var(--text); text-align:right; font-weight:600;}
+  .seal{
+    margin-top:18px;
+    text-align:center;
+    font-size:11.5px;
+    color:var(--gold-2);
+    letter-spacing:1.5px;
+    font-style:italic;
+  }
+  .actions{
+    display:flex;
+    gap:10px;
+    margin-top:16px;
+  }
+  .actions button{margin-top:0; font-size:12px; padding:11px;}
+  .btn-ghost{
+    background:transparent !important;
+    color:var(--gold-2) !important;
+    border:1px solid rgba(201,162,39,0.4) !important;
+  }
+  .note{
+    margin-top:14px;
+    font-size:11.5px;
+    color:var(--muted);
+    text-align:center;
+    line-height:1.5;
+  }
+  .status{
+    margin-top:10px;
+    text-align:center;
+    font-size:12px;
+    color:#8fd19e;
+    min-height:16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <div class="card-header">
+      <div class="crest">SKM</div>
+      <h1>Document Authenticator</h1>
+      <div class="sub">Generate a 12‑Character Verified Document No.</div>
+    </div>
+    <div class="body-pad">
+      <label for="name">Full Name</label>
+      <input id="name" type="text" value="Shineil Keith Mathias" />
+
+      <label for="capacity">Acting in the Capacity of</label>
+      <input id="capacity" type="text" value="Founder" />
+
+      <div class="row2">
+        <div>
+          <label for="date">Document Date</label>
+          <input id="date" type="date" />
+        </div>
+        <div>
+          <label for="doctype">Document Type</label>
+          <input id="doctype" type="text" placeholder="e.g. Certificate, Letter, Authorization" value="Authorization Letter" />
+        </div>
+      </div>
+
+      <label for="purpose">Purpose / Description</label>
+      <textarea id="purpose" placeholder="Brief description of this document...">Official authorization document.</textarea>
+
+      <label for="verifier">Verified By</label>
+      <input id="verifier" type="text" value="S.K.M." />
+
+      <button id="genBtn">Generate Document No.</button>
+      <div class="status" id="status"></div>
+
+      <div class="result" id="result">
+        <div class="cert">
+          <div class="cert-title">Official Document Number</div>
+          <div class="doc-no" id="docNoDisplay">— — — — — — — — — — — —</div>
+          <div class="field"><span class="k">Name</span><span class="v" id="outName"></span></div>
+          <div class="field"><span class="k">Capacity</span><span class="v" id="outCapacity"></span></div>
+          <div class="field"><span class="k">The</span><span class="v" id="outDate"></span></div>
+          <div class="field"><span class="k">Document Type</span><span class="v" id="outType"></span></div>
+          <div class="field"><span class="k">Purpose</span><span class="v" id="outPurpose"></span></div>
+          <div class="seal">This document is authentic and is verified by <span id="outVerifier">S.K.M.</span></div>
+        </div>
+        <div class="actions">
+          <button class="btn-ghost" id="copyBtn">Copy Document No.</button>
+          <button class="btn-ghost" id="newBtn">Generate Another</button>
+        </div>
+        <div class="note">Store this document number safely — it is required to verify authenticity on the Document Verifier page. Verification works instantly when opened in the same browser session (shared local record), and always validates the tamper-proof format and checksum offline.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------- Encoding scheme ----------
+// 12-character code: 2-char series prefix (from doc type) + 8 random base36 chars + 2-char checksum
+// Checksum is a mod-36 weighted algorithm over the first 10 characters, split into 2 chars,
+// so ANY verifier (even without the stored record) can confirm the code's structural authenticity.
+// Full record detail is stored locally (keyed by the code) for instant rich verification.
+
+const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+function randomChar(){
+  return ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
+}
+
+function seriesPrefix(docType){
+  const clean = (docType || "DOC").toUpperCase().replace(/[^A-Z]/g, "");
+  if(clean.length >= 2) return clean.slice(0,2);
+  if(clean.length === 1) return clean + "X";
+  return "DC";
+}
+
+function charValue(c){
+  return ALPHABET.indexOf(c);
+}
+
+function computeChecksum(chars10){
+  // weighted sum mod 36^2, encoded as 2 base36 chars
+  let sum = 0;
+  for(let i = 0; i < chars10.length; i++){
+    sum += charValue(chars10[i]) * (i + 3); // weight
+  }
+  sum = sum % 1296; // 36*36
+  const c1 = ALPHABET[Math.floor(sum / 36)];
+  const c2 = ALPHABET[sum % 36];
+  return c1 + c2;
+}
+
+function generateDocNumber(docType){
+  const prefix = seriesPrefix(docType);
+  let mid = "";
+  for(let i = 0; i < 8; i++) mid += randomChar();
+  const first10 = prefix + mid;
+  const checksum = computeChecksum(first10);
+  return first10 + checksum; // total 12 chars
+}
+
+function saveRecord(code, record){
+  try{
+    const store = JSON.parse(localStorage.getItem("skm_doc_records") || "{}");
+    store[code] = record;
+    localStorage.setItem("skm_doc_records", JSON.stringify(store));
+  }catch(e){
+    console.error("Could not save record locally:", e);
+  }
+}
+
+function formatDate(d){
+  if(!d) return "—";
+  const dt = new Date(d + "T00:00:00");
+  if(isNaN(dt)) return d;
+  return dt.toLocaleDateString(undefined, { year:"numeric", month:"long", day:"numeric" });
+}
+
+document.getElementById("date").valueAsDate = new Date();
+
+document.getElementById("genBtn").addEventListener("click", () => {
+  const name = document.getElementById("name").value.trim() || "Shineil Keith Mathias";
+  const capacity = document.getElementById("capacity").value.trim() || "Founder";
+  const dateRaw = document.getElementById("date").value;
+  const dateDisplay = formatDate(dateRaw);
+  const doctype = document.getElementById("doctype").value.trim() || "Document";
+  const purpose = document.getElementById("purpose").value.trim() || "—";
+  const verifier = document.getElementById("verifier").value.trim() || "S.K.M.";
+
+  const code = generateDocNumber(doctype);
+
+  const record = {
+    name, capacity,
+    date: dateRaw,
+    dateDisplay,
+    doctype, purpose, verifier,
+    issuedAt: new Date().toISOString()
+  };
+  saveRecord(code, record);
+
+  document.getElementById("docNoDisplay").textContent = code;
+  document.getElementById("outName").textContent = name;
+  document.getElementById("outCapacity").textContent = capacity;
+  document.getElementById("outDate").textContent = dateDisplay;
+  document.getElementById("outType").textContent = doctype;
+  document.getElementById("outPurpose").textContent = purpose;
+  document.getElementById("outVerifier").textContent = verifier;
+
+  document.getElementById("result").classList.add("show");
+  document.getElementById("status").textContent = "✓ Document number generated and recorded.";
+});
+
+document.getElementById("copyBtn").addEventListener("click", () => {
+  const code = document.getElementById("docNoDisplay").textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    document.getElementById("status").textContent = "✓ Copied to clipboard.";
+  }).catch(() => {
+    document.getElementById("status").textContent = "Copy manually: " + code;
+  });
+});
+
+document.getElementById("newBtn").addEventListener("click", () => {
+  document.getElementById("result").classList.remove("show");
+  document.getElementById("status").textContent = "";
+});
+</script>
+</body>
+</html>
