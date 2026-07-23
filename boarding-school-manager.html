@@ -187,6 +187,7 @@
     <div><h1>Boarding School Manager</h1><span>Track everything. Stay organized.</span></div>
   </div>
   <div class="top-right">
+    <div class="auth-area"></div>
     <div class="toggle" onclick="toggleTheme()"></div>
   </div>
 </div>
@@ -751,5 +752,6 @@ function esc(s){const d=document.createElement('div');d.textContent=s;return d.i
 renderLaundry();renderClean();renderPocket();renderChores();renderWeekend();addDefaultPack();renderPacking();renderMeals();updateSummary();
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
 </script>
+<script src="auth-sync.js"></script>
 </body>
 </html>

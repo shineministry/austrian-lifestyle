@@ -202,6 +202,7 @@
     <div><h1>Friends & Contacts</h1><span>Everyone you need, in one place</span></div>
   </div>
   <div class="top-right">
+    <div class="auth-area"></div>
     <div class="toggle" onclick="toggleTheme()"></div>
   </div>
 </div>
@@ -490,5 +491,6 @@ function refreshAll(){
 refreshAll();
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
 </script>
+<script src="auth-sync.js"></script>
 </body>
 </html>

@@ -263,6 +263,7 @@
   </div>
   <div class="top-right">
     <span id="clock">--:--:--</span>
+    <div class="auth-area"></div>
     <div class="toggle" id="themeToggle" title="Toggle dark mode"></div>
   </div>
 </div>
@@ -866,5 +867,6 @@ renderStats();
 renderStats();
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
 </script>
+<script src="auth-sync.js"></script>
 </body>
 </html>

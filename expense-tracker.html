@@ -173,6 +173,7 @@
     <div><h1>Expense Tracker</h1><span>Manage your money wisely 🇪🇺</span></div>
   </div>
   <div class="top-right">
+    <div class="auth-area"></div>
     <div class="toggle" onclick="toggleTheme()"></div>
   </div>
 </div>
@@ -811,5 +812,6 @@ window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setT
 },200);});
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
 </script>
+<script src="auth-sync.js"></script>
 </body>
 </html>

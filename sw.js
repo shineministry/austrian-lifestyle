@@ -1,4 +1,4 @@
-const CACHE_NAME = 'austrian-lifestyle-v1';
+const CACHE_NAME = 'austrian-lifestyle-v2';
 const LOCAL_FILES = [
   'index.html',
   'student-dashboard.html',
@@ -7,7 +7,8 @@ const LOCAL_FILES = [
   'expense-tracker.html',
   'friends-contacts.html',
   'manifest.json',
-  'sw.js'
+  'sw.js',
+  'auth-sync.js'
 ];
 
 /* Install: cache all local files */
@@ -44,6 +45,20 @@ self.addEventListener('fetch', event => {
           return cached || fetched;
         })
       )
+    );
+    return;
+  }
+
+  /* Firebase SDK — network first, cache fallback */
+  if (url.hostname.includes('gstatic.com')) {
+    event.respondWith(
+      fetch(event.request).then(response => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        }
+        return response;
+      }).catch(() => caches.match(event.request))
     );
     return;
   }

@@ -123,6 +123,7 @@
     <div><h1>Austrian Lifestyle</h1><span>Your complete student toolkit 🇦🇹</span></div>
   </div>
   <div class="top-right">
+    <div class="auth-area"></div>
     <div class="toggle" onclick="toggleTheme()"></div>
   </div>
 </div>
@@ -254,5 +255,6 @@ function toggleTheme(){
 (function(){const t=localStorage.getItem('al-theme');if(t)document.documentElement.setAttribute('data-theme',t);})();
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
 </script>
+<script src="auth-sync.js"></script>
 </body>
 </html>
