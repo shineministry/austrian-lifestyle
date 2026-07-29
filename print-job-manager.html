@@ -112,6 +112,24 @@
   .stamp{ display:inline-flex; align-items:center; gap: 6px; font-size: 13px; padding: 6px 12px; border: 2px solid; border-radius: 3px; transform: rotate(-1.2deg); font-weight:bold; letter-spacing: 0.03em; }
   .stamp.bw{ border-color: var(--ink); color: var(--ink); }
   .stamp.color{ border-color: var(--stamp-red); color: var(--stamp-red); transform: rotate(1deg); }
+  .stamp.method{ transform: rotate(-0.6deg); }
+  .stamp.method.online{ border-color: var(--stamp-green); color: var(--stamp-green); }
+  .stamp.method.xerox{ border-color: var(--ink); color: var(--ink); }
+
+  .method-toggle{ display:flex; gap:8px; }
+  .method-toggle label{
+    flex:1; display:flex; align-items:center; justify-content:center; gap:6px;
+    border:1px solid var(--line); border-radius:3px; padding:9px 10px; cursor:pointer;
+    background:#fffdf7; font-size:12px; text-transform:uppercase; letter-spacing:0.08em; opacity:0.65;
+  }
+  .method-toggle input{ display:none; }
+  .method-toggle input:checked + span{ font-weight:bold; }
+  .method-toggle label:has(input:checked){ opacity:1; border-color: var(--ink); background:#f2ede0; }
+
+  .job.done{ opacity:0.55; background:#eef1ec; }
+  .job.done .job-name{ text-decoration: line-through; }
+  .done-btn{ }
+  .done-btn.is-done{ background: var(--stamp-green); color:#fff; border-color: var(--stamp-green); opacity:1; }
 
   .edit-form{ display:flex; flex-direction: column; gap: 10px; margin-top: 10px; }
   .edit-form .form-row.split{ gap: 10px; }
@@ -186,6 +204,13 @@
         <div>
           <label for="color">Colour copies</label>
           <input type="number" id="color" min="0" value="0">
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Print method</label>
+        <div class="method-toggle">
+          <label><input type="radio" name="method" value="XEROX" checked><span>Xerox</span></label>
+          <label><input type="radio" name="method" value="ONLINE"><span>Online</span></label>
         </div>
       </div>
       <button type="submit" class="btn-primary" id="submitBtn">Add to queue</button>
@@ -282,6 +307,13 @@
                     <input type="number" min="0" id="edit-color-${job.id}" value="${job.color}">
                   </div>
                 </div>
+                <div class="form-row">
+                  <label>Print method</label>
+                  <div class="method-toggle">
+                    <label><input type="radio" name="edit-method-${job.id}" value="XEROX" ${(job.method || 'XEROX') === 'XEROX' ? 'checked' : ''}><span>Xerox</span></label>
+                    <label><input type="radio" name="edit-method-${job.id}" value="ONLINE" ${job.method === 'ONLINE' ? 'checked' : ''}><span>Online</span></label>
+                  </div>
+                </div>
                 <div class="edit-actions">
                   <button class="btn-save" onclick="saveEdit('${job.id}')">Save changes</button>
                   <button class="btn-cancel" onclick="cancelEdit()">Cancel</button>
@@ -300,8 +332,9 @@
              </a>`
           : `<div class="doc-missing">No PDF attached</div>`;
 
+        const method = job.method === 'ONLINE' ? 'ONLINE' : 'XEROX';
         return `
-          <div class="job">
+          <div class="job ${job.done ? 'done' : ''}">
             <div class="job-top">
               <div>
                 <div class="job-id">${ticketNo(job.ticket)}</div>
@@ -309,6 +342,7 @@
                 ${docPreview}
               </div>
               <div class="job-actions">
+                <button class="icon-btn done-btn ${job.done ? 'is-done' : ''}" onclick="toggleDone('${job.id}')" title="Mark done">&#10003;</button>
                 <button class="icon-btn" onclick="startEdit('${job.id}')">Edit</button>
                 <button class="icon-btn danger" onclick="removeJob('${job.id}')">Remove</button>
               </div>
@@ -316,6 +350,7 @@
             <div class="counts">
               <span class="stamp bw">B/W &middot; ${job.bw} copies</span>
               <span class="stamp color">Colour &middot; ${job.color} copies</span>
+              <span class="stamp method ${method.toLowerCase()}">${method}</span>
             </div>
           </div>
         `;
@@ -421,6 +456,7 @@
     const name = document.getElementById('name').value.trim();
     const bw = Number(document.getElementById('bw').value) || 0;
     const color = Number(document.getElementById('color').value) || 0;
+    const method = (document.querySelector('input[name="method"]:checked') || {}).value || 'XEROX';
     if(!name) return;
 
     const submitBtn = document.getElementById('submitBtn');
@@ -432,6 +468,7 @@
       fd.append('name', name);
       fd.append('bw', bw);
       fd.append('color', color);
+      fd.append('method', method);
       if(pendingFile) fd.append('file', pendingFile);
 
       const res = await fetch(API_BASE + '/jobs', { method: 'POST', body: fd });
@@ -462,17 +499,40 @@
     const name = document.getElementById(`edit-name-${id}`).value.trim();
     const bw = Number(document.getElementById(`edit-bw-${id}`).value) || 0;
     const color = Number(document.getElementById(`edit-color-${id}`).value) || 0;
+    const methodEl = document.querySelector(`input[name="edit-method-${id}"]:checked`);
+    const method = methodEl ? methodEl.value : 'XEROX';
     try{
       const res = await fetch(API_BASE + '/jobs/' + id, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, bw, color })
+        body: JSON.stringify({ name, bw, color, method })
       });
       if(!res.ok) throw new Error('update failed');
       editingId = null;
       await loadJobs();
     }catch(err){
       showToast('Could not save changes.');
+    }
+  };
+
+  window.toggleDone = async function(id){
+    const job = jobs.find(j => j.id === id);
+    if(!job) return;
+    const prevDone = !!job.done;
+    job.done = !prevDone; // optimistic
+    render();
+    try{
+      const res = await fetch(API_BASE + '/jobs/' + id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ done: job.done })
+      });
+      if(!res.ok) throw new Error('update failed');
+      await loadJobs(true);
+    }catch(err){
+      job.done = prevDone; // revert
+      render();
+      showToast('Could not update status.');
     }
   };
 
