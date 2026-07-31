@@ -284,6 +284,7 @@
   let currentFilter = 'ONLINE'; // default view on load
   let searchQuery = '';
   const pendingToggles = new Map(); // jobId -> optimistic done value still settling on the backend
+  let lastRenderSig = null;
 
   // Cross-tab instant sync on this device/browser (tick marks, edits, etc.)
   let bc = null;
@@ -319,6 +320,16 @@
         jobs.forEach(j => { if(pendingToggles.has(j.id)) j.done = pendingToggles.get(j.id); });
       }
       try{ localStorage.setItem(CACHE_KEY, JSON.stringify(jobs)); }catch(e){}
+      // Skip a full DOM/thumbnail rebuild if nothing actually changed since the
+      // last render — rebuilding on every poll was recreating cached PDF thumbnail
+      // images repeatedly and could crash the tab (memory pressure -> "Aww, Snap!").
+      const sig = JSON.stringify(jobs);
+      if(sig === lastRenderSig && editingId === null){
+        const banner = document.getElementById('offlineBanner');
+        if(banner) banner.style.display = 'none';
+        return;
+      }
+      lastRenderSig = sig;
       render(false);
     }catch(e){
       let cached = [];
@@ -368,6 +379,7 @@
   }
 
   function render(offline){
+    lastRenderSig = JSON.stringify(jobs);
     const banner = document.getElementById('offlineBanner');
     if(banner) banner.style.display = offline ? 'block' : 'none';
     renderFilterTabs();
@@ -714,7 +726,7 @@
 
   loadJobs();
   // Fast polling so tick marks / status changes show up on every device almost immediately.
-  setInterval(() => { if(editingId === null) loadJobs(true); }, 1500);
+  setInterval(() => { if(editingId === null) loadJobs(true); }, 2000);
 
   // Instant refresh the moment this tab/device regains focus or comes back online.
   document.addEventListener('visibilitychange', () => {
