@@ -79,6 +79,33 @@
   }
   .section-label::after{ content:""; flex:1; height:1px; background: var(--ink); opacity:0.25; }
 
+  .filter-tabs{ display:flex; gap:8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .filter-tab{
+    background:#fffdf7; border:1px solid var(--line); border-radius:3px; padding:8px 14px;
+    font-size:12px; text-transform:uppercase; letter-spacing:0.08em; opacity:0.65; cursor:pointer;
+    display:flex; align-items:center; gap:6px;
+  }
+  .filter-tab:hover{ opacity:1; border-color: var(--ink); }
+  .filter-tab.active{ opacity:1; border-color: var(--ink); background:#f2ede0; font-weight:bold; }
+  .filter-tab .count{
+    background: var(--ink); color: var(--paper); border-radius: 10px; font-size: 10px;
+    padding: 1px 7px; min-width: 16px; text-align:center;
+  }
+  .filter-tab.active .count{ background: var(--stamp-red); }
+
+  .toolbar{ display:flex; gap:10px; margin-bottom: 14px; flex-wrap: wrap; align-items:center; }
+  .search-box{
+    flex:1; min-width: 160px; font-family: inherit; font-size: 14px; padding: 9px 12px;
+    background:#fffdf7; border:1px solid var(--line); border-radius:3px; color:var(--ink); outline:none;
+  }
+  .search-box:focus{ border-color: var(--stamp-red); }
+  .bulk-actions{ display:flex; gap:8px; flex-wrap: wrap; }
+  .bulk-actions button{
+    background: transparent; border:1px solid var(--line); font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.06em; padding: 8px 12px; color: var(--ink); opacity: 0.75;
+  }
+  .bulk-actions button:hover{ opacity:1; border-color: var(--ink); }
+
   .job{
     background: var(--paper); border: 1px solid var(--line); border-left: 6px solid var(--stamp-green);
     border-radius: 3px; padding: 16px 18px; margin-bottom: 14px; box-shadow: 0 3px 10px rgba(0,0,0,0.08);
@@ -157,6 +184,15 @@
   }
   .toast.show{ transform: translateX(-50%) translateY(0); }
 
+  .job-id{ cursor:pointer; }
+  .job-id:hover{ text-decoration: underline; }
+
+  .live-dot{
+    display:inline-block; width:7px; height:7px; border-radius:50%; background: var(--stamp-green);
+    margin-right:5px; vertical-align:middle; animation: pulse 1.6s infinite;
+  }
+  @keyframes pulse{ 0%,100%{ opacity:1; } 50%{ opacity:0.3; } }
+
   footer{ text-align:center; margin-top: 34px; font-size: 11px; opacity: 0.5; letter-spacing: 0.06em; }
 
   @media (max-width: 520px){
@@ -218,11 +254,22 @@
   </div>
 
   <div class="section-label">Jobs</div>
+
+  <div class="filter-tabs" id="filterTabs"></div>
+
+  <div class="toolbar">
+    <input type="text" class="search-box" id="searchBox" placeholder="Search jobs by name...">
+    <div class="bulk-actions">
+      <button type="button" id="markAllDoneBtn" onclick="markAllDone()">Mark all done</button>
+      <button type="button" id="clearDoneBtn" onclick="clearCompleted()">Clear completed</button>
+    </div>
+  </div>
+
   <div id="jobList"></div>
 
   <div class="totals" id="totals"></div>
 
-  <footer>SHARED QUEUE &middot; SYNCED VIA WORKER API</footer>
+  <footer><span class="live-dot"></span>SHARED QUEUE &middot; SYNCED VIA WORKER API &middot; LIVE</footer>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -234,6 +281,14 @@
   let jobs = [];
   let editingId = null;
   let pendingFile = null;
+  let currentFilter = 'ONLINE'; // default view on load
+  let searchQuery = '';
+
+  // Cross-tab instant sync on this device/browser (tick marks, edits, etc.)
+  let bc = null;
+  try{ bc = new BroadcastChannel('print-queue-sync'); }catch(e){}
+  if(bc) bc.onmessage = () => loadJobs(true);
+  function notifyOtherTabs(){ try{ if(bc) bc.postMessage('refresh'); }catch(e){} }
 
   function ticketNo(n){ return '#' + String(n).padStart(4, '0'); }
   function fmtSize(bytes){
@@ -280,14 +335,46 @@
   }
   window.openPdf = openPdf;
 
+  function renderFilterTabs(){
+    const el = document.getElementById('filterTabs');
+    if(!el) return;
+    const counts = {
+      ALL: jobs.length,
+      ONLINE: jobs.filter(j => (j.method || 'XEROX') === 'ONLINE').length,
+      XEROX: jobs.filter(j => (j.method || 'XEROX') === 'XEROX').length
+    };
+    el.innerHTML = ['ALL', 'ONLINE', 'XEROX'].map(f => `
+      <div class="filter-tab ${currentFilter === f ? 'active' : ''}" onclick="setFilter('${f}')">
+        ${f} <span class="count">${counts[f]}</span>
+      </div>
+    `).join('');
+  }
+  window.setFilter = function(f){ currentFilter = f; render(); };
+
+  function getFilteredJobs(){
+    let list = jobs;
+    if(currentFilter !== 'ALL'){
+      list = list.filter(j => (j.method || 'XEROX') === currentFilter);
+    }
+    if(searchQuery.trim()){
+      const q = searchQuery.trim().toLowerCase();
+      list = list.filter(j => (j.name || '').toLowerCase().includes(q));
+    }
+    return list;
+  }
+
   function render(offline){
     const banner = document.getElementById('offlineBanner');
     if(banner) banner.style.display = offline ? 'block' : 'none';
+    renderFilterTabs();
     const list = document.getElementById('jobList');
+    const visibleJobs = getFilteredJobs();
     if(jobs.length === 0){
       list.innerHTML = '<div class="empty">No jobs yet. Upload a PDF above to start the queue.</div>';
+    } else if(visibleJobs.length === 0){
+      list.innerHTML = '<div class="empty">No jobs match this filter/search.</div>';
     } else {
-      list.innerHTML = jobs.map(job => {
+      list.innerHTML = visibleJobs.map(job => {
         if(editingId === job.id){
           return `
             <div class="job editing">
@@ -337,13 +424,14 @@
           <div class="job ${job.done ? 'done' : ''}">
             <div class="job-top">
               <div>
-                <div class="job-id">${ticketNo(job.ticket)}</div>
+                <div class="job-id" onclick="copyTicket('${job.id}', '${ticketNo(job.ticket)}')" title="Tap to copy ticket number">${ticketNo(job.ticket)}</div>
                 <div class="job-name">${escapeHtml(job.name)}</div>
                 ${docPreview}
               </div>
               <div class="job-actions">
                 <button class="icon-btn done-btn ${job.done ? 'is-done' : ''}" onclick="toggleDone('${job.id}')" title="Mark done">&#10003;</button>
                 <button class="icon-btn" onclick="startEdit('${job.id}')">Edit</button>
+                <button class="icon-btn" onclick="duplicateJob('${job.id}')" title="Duplicate this job">Duplicate</button>
                 <button class="icon-btn danger" onclick="removeJob('${job.id}')">Remove</button>
               </div>
             </div>
@@ -357,10 +445,10 @@
       }).join('');
     }
 
-    const totalBw = jobs.reduce((s, j) => s + Number(j.bw || 0), 0);
-    const totalColor = jobs.reduce((s, j) => s + Number(j.color || 0), 0);
+    const totalBw = visibleJobs.reduce((s, j) => s + Number(j.bw || 0), 0);
+    const totalColor = visibleJobs.reduce((s, j) => s + Number(j.color || 0), 0);
     document.getElementById('totals').innerHTML = `
-      <div class="label">Counter total &middot; ${jobs.length} job${jobs.length === 1 ? '' : 's'}</div>
+      <div class="label">${currentFilter} total &middot; ${visibleJobs.length} job${visibleJobs.length === 1 ? '' : 's'}</div>
       <div class="figures">
         <div class="figure"><div class="num">${totalBw}</div><div class="cap">B/W copies</div></div>
         <div class="figure color"><div class="num">${totalColor}</div><div class="cap">Colour copies</div></div>
@@ -483,6 +571,7 @@
       uploadFilename.textContent = '';
 
       await loadJobs();
+      notifyOtherTabs();
       showToast('Added to queue and synced.');
     }catch(err){
       showToast('Could not add job. Check your connection and try again.');
@@ -491,6 +580,69 @@
       submitBtn.textContent = 'Add to queue';
     }
   });
+
+  document.getElementById('searchBox').addEventListener('input', (e) => {
+    searchQuery = e.target.value;
+    render();
+  });
+
+  window.copyTicket = function(id, ticket){
+    try{
+      navigator.clipboard.writeText(ticket);
+      showToast('Copied ' + ticket + ' to clipboard.');
+    }catch(e){
+      showToast(ticket);
+    }
+  };
+
+  window.duplicateJob = async function(id){
+    const job = jobs.find(j => j.id === id);
+    if(!job) return;
+    try{
+      const fd = new FormData();
+      fd.append('name', job.name + ' (copy)');
+      fd.append('bw', job.bw || 0);
+      fd.append('color', job.color || 0);
+      fd.append('method', job.method || 'XEROX');
+      const res = await fetch(API_BASE + '/jobs', { method: 'POST', body: fd });
+      if(!res.ok) throw new Error('duplicate failed');
+      await loadJobs();
+      notifyOtherTabs();
+      showToast('Job duplicated (attach a PDF to the copy if needed).');
+    }catch(err){
+      showToast('Could not duplicate job.');
+    }
+  };
+
+  window.markAllDone = async function(){
+    const targets = getFilteredJobs().filter(j => !j.done);
+    if(targets.length === 0){ showToast('Nothing to mark — all done already.'); return; }
+    if(!confirm(`Mark ${targets.length} job(s) as done?`)) return;
+    try{
+      await Promise.all(targets.map(j => fetch(API_BASE + '/jobs/' + j.id, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ done: true })
+      })));
+      await loadJobs();
+      notifyOtherTabs();
+      showToast('Marked as done.');
+    }catch(err){
+      showToast('Could not update all jobs.');
+    }
+  };
+
+  window.clearCompleted = async function(){
+    const targets = getFilteredJobs().filter(j => j.done);
+    if(targets.length === 0){ showToast('No completed jobs to clear.'); return; }
+    if(!confirm(`Remove ${targets.length} completed job(s)? This can't be undone.`)) return;
+    try{
+      await Promise.all(targets.map(j => fetch(API_BASE + '/jobs/' + j.id, { method: 'DELETE' })));
+      await loadJobs();
+      notifyOtherTabs();
+      showToast('Completed jobs cleared.');
+    }catch(err){
+      showToast('Could not clear completed jobs.');
+    }
+  };
 
   window.startEdit = function(id){ editingId = id; render(); };
   window.cancelEdit = function(){ editingId = null; render(); };
@@ -510,6 +662,7 @@
       if(!res.ok) throw new Error('update failed');
       editingId = null;
       await loadJobs();
+      notifyOtherTabs();
     }catch(err){
       showToast('Could not save changes.');
     }
@@ -529,6 +682,7 @@
       });
       if(!res.ok) throw new Error('update failed');
       await loadJobs(true);
+      notifyOtherTabs();
     }catch(err){
       job.done = prevDone; // revert
       render();
@@ -541,13 +695,22 @@
       const res = await fetch(API_BASE + '/jobs/' + id, { method: 'DELETE' });
       if(!res.ok) throw new Error('delete failed');
       await loadJobs();
+      notifyOtherTabs();
     }catch(err){
       showToast('Could not remove job.');
     }
   };
 
   loadJobs();
-  setInterval(() => { if(editingId === null) loadJobs(true); }, 4000);
+  // Fast polling so tick marks / status changes show up on every device almost immediately.
+  setInterval(() => { if(editingId === null) loadJobs(true); }, 1500);
+
+  // Instant refresh the moment this tab/device regains focus or comes back online.
+  document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState === 'visible' && editingId === null) loadJobs(true);
+  });
+  window.addEventListener('focus', () => { if(editingId === null) loadJobs(true); });
+  window.addEventListener('online', () => loadJobs(true));
 
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('print-queue-sw.js').catch(() => {});
