@@ -514,25 +514,36 @@
 
   async function generateThumb(jobId){
     if(typeof pdfjsLib === 'undefined') return null;
+    let pdf = null;
+    let canvas = null;
     try{
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
       const res = await fetch(API_BASE + '/pdf/' + jobId);
       if(!res.ok) return null;
       const buf = await res.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+      pdf = await pdfjsLib.getDocument({ data: buf }).promise;
       const page = await pdf.getPage(1);
       const viewport = page.getViewport({ scale: 1 });
       const scale = 160 / viewport.width;
       const scaledViewport = page.getViewport({ scale });
 
-      const canvas = document.createElement('canvas');
+      canvas = document.createElement('canvas');
       canvas.width = scaledViewport.width;
       canvas.height = scaledViewport.height;
       await page.render({ canvasContext: canvas.getContext('2d'), viewport: scaledViewport }).promise;
 
-      return { dataUrl: canvas.toDataURL('image/jpeg', 0.75), pageCount: pdf.numPages };
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+      const pageCount = pdf.numPages;
+      page.cleanup();
+      return { dataUrl, pageCount };
     }catch(e){
       return null; // falls back to the plain PDF icon
+    }finally{
+      // Release PDF.js's internal buffers and the canvas's pixel memory —
+      // without this, every thumbnail generated stays resident forever
+      // (this was the cause of memory climbing to ~1GB).
+      if(pdf){ try{ pdf.destroy(); }catch(e){} }
+      if(canvas){ canvas.width = 0; canvas.height = 0; canvas = null; }
     }
   }
 
