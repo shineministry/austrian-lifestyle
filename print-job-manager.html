@@ -283,6 +283,7 @@
   let pendingFile = null;
   let currentFilter = 'ONLINE'; // default view on load
   let searchQuery = '';
+  const pendingToggles = new Map(); // jobId -> optimistic done value still settling on the backend
 
   // Cross-tab instant sync on this device/browser (tick marks, edits, etc.)
   let bc = null;
@@ -314,6 +315,9 @@
       if(!res.ok) throw new Error('bad response');
       const data = await res.json();
       jobs = data.jobs || [];
+      if(pendingToggles.size){
+        jobs.forEach(j => { if(pendingToggles.has(j.id)) j.done = pendingToggles.get(j.id); });
+      }
       try{ localStorage.setItem(CACHE_KEY, JSON.stringify(jobs)); }catch(e){}
       render(false);
     }catch(e){
@@ -672,7 +676,9 @@
     const job = jobs.find(j => j.id === id);
     if(!job) return;
     const prevDone = !!job.done;
-    job.done = !prevDone; // optimistic
+    const newDone = !prevDone;
+    job.done = newDone; // optimistic
+    pendingToggles.set(id, newDone);
     render();
     try{
       const res = await fetch(API_BASE + '/jobs/' + id, {
@@ -681,9 +687,14 @@
         body: JSON.stringify({ done: job.done })
       });
       if(!res.ok) throw new Error('update failed');
+      // Give the backend a brief moment to become read-consistent before trusting
+      // a fresh GET again; meanwhile pendingToggles protects our optimistic value
+      // from being overwritten by any poll that lands in between.
+      setTimeout(() => pendingToggles.delete(id), 2500);
       await loadJobs(true);
       notifyOtherTabs();
     }catch(err){
+      pendingToggles.delete(id);
       job.done = prevDone; // revert
       render();
       showToast('Could not update status.');
