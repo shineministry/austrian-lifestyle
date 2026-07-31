@@ -184,6 +184,60 @@
   }
   .toast.show{ transform: translateX(-50%) translateY(0); }
 
+  /* ---- PDF viewer modal ---- */
+  .pdf-modal{
+    display:none; position:fixed; inset:0; z-index: 100;
+  }
+  .pdf-modal.open{ display:block; }
+  .pdf-modal-backdrop{
+    position:absolute; inset:0; background: rgba(20,17,13,0.82);
+  }
+  .pdf-modal-content{
+    position:absolute; inset: 0; display:flex; flex-direction:column;
+    background: var(--kraft);
+  }
+  @media (min-width: 720px){
+    .pdf-modal-content{
+      inset: 4vh 8vw; border-radius: 6px; overflow:hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+  }
+  .pdf-modal-header{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background: var(--ink); color: var(--paper); padding: 10px 14px; flex-wrap: wrap;
+  }
+  .pdf-modal-title{
+    font-size: 13px; font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    flex: 1 1 140px; min-width: 80px;
+  }
+  .pdf-modal-controls{ display:flex; align-items:center; gap: 6px; flex-wrap: wrap; }
+  .pdf-modal-controls button, .pdf-modal-controls a{
+    background: transparent; border: 1px solid rgba(246,241,228,0.4); color: var(--paper);
+    font-family: inherit; font-size: 13px; padding: 7px 11px; border-radius: 3px; cursor:pointer;
+    text-decoration:none; line-height:1;
+  }
+  .pdf-modal-controls button:hover, .pdf-modal-controls a:hover{ background: rgba(246,241,228,0.15); }
+  .pdf-modal-controls button:disabled{ opacity:0.35; cursor:not-allowed; }
+  .pdf-page-indicator{ font-size: 12px; opacity: 0.85; padding: 0 4px; white-space:nowrap; }
+  .pdf-modal-close{ font-size: 18px !important; padding: 6px 12px !important; }
+
+  .pdf-modal-body{
+    flex:1; overflow:auto; display:flex; align-items:flex-start; justify-content:center;
+    padding: 18px 10px 40px; -webkit-overflow-scrolling: touch; touch-action: pan-y pinch-zoom;
+    background: repeating-linear-gradient(45deg, #cabb92, #cabb92 10px, #c3b389 10px, #c3b389 20px);
+  }
+  .pdf-modal-body canvas{
+    background:#fff; box-shadow: 0 6px 24px rgba(0,0,0,0.35); max-width: 100%; height:auto;
+  }
+  .pdf-modal-loading, .pdf-modal-error{
+    color: var(--ink); font-size: 14px; text-align:center; padding: 60px 20px; opacity:0.8;
+  }
+
+  @media (max-width: 520px){
+    .pdf-modal-controls{ gap: 4px; }
+    .pdf-modal-controls button, .pdf-modal-controls a{ padding: 8px 9px; font-size: 12px; }
+    .pdf-modal-title{ flex-basis: 100%; order: -1; }
+  }
+
   .job-id{ cursor:pointer; }
   .job-id:hover{ text-decoration: underline; }
 
@@ -274,6 +328,28 @@
 
 <div class="toast" id="toast"></div>
 
+<div class="pdf-modal" id="pdfModal">
+  <div class="pdf-modal-backdrop" onclick="closePdfModal()"></div>
+  <div class="pdf-modal-content">
+    <div class="pdf-modal-header">
+      <div class="pdf-modal-title" id="pdfModalTitle">document.pdf</div>
+      <div class="pdf-modal-controls">
+        <button type="button" id="pdfPrevBtn" onclick="pdfPrevPage()" title="Previous page">&#8592;</button>
+        <span class="pdf-page-indicator" id="pdfPageIndicator">–</span>
+        <button type="button" id="pdfNextBtn" onclick="pdfNextPage()" title="Next page">&#8594;</button>
+        <button type="button" onclick="pdfZoomOut()" title="Zoom out">&minus;</button>
+        <button type="button" onclick="pdfZoomIn()" title="Zoom in">&plus;</button>
+        <a id="pdfDownloadLink" href="#" title="Download PDF">Download</a>
+        <button type="button" class="pdf-modal-close" onclick="closePdfModal()" title="Close">&times;</button>
+      </div>
+    </div>
+    <div class="pdf-modal-body" id="pdfModalBody">
+      <div class="pdf-modal-loading" id="pdfModalLoading">Loading document…</div>
+      <canvas id="pdfCanvas" style="display:none;"></canvas>
+    </div>
+  </div>
+</div>
+
 <script>
   const API_BASE = "https://shark.shinumaths989.workers.dev";
   const CACHE_KEY = "print-queue-cache-v1";
@@ -345,10 +421,132 @@
     }
   }
 
-  function openPdf(jobId){
-    window.open(API_BASE + '/pdf/' + jobId, '_blank');
+  // ---- In-page PDF viewer modal (PDF.js) ----
+  let pdfModalDoc = null;
+  let pdfModalPage = 1;
+  let pdfModalScale = 1;
+  let pdfModalBaseScale = 1;
+  let pdfModalRenderTask = null;
+
+  window.openPdf = async function(jobId){
+    const job = jobs.find(j => j.id === jobId);
+    const modal = document.getElementById('pdfModal');
+    const title = document.getElementById('pdfModalTitle');
+    const loading = document.getElementById('pdfModalLoading');
+    const canvas = document.getElementById('pdfCanvas');
+    const downloadLink = document.getElementById('pdfDownloadLink');
+
+    title.textContent = (job && job.fileName) || 'document.pdf';
+    downloadLink.href = API_BASE + '/pdf/' + jobId;
+    downloadLink.setAttribute('download', (job && job.fileName) || 'document.pdf');
+    loading.style.display = 'block';
+    loading.textContent = 'Loading document…';
+    canvas.style.display = 'none';
+    document.getElementById('pdfPageIndicator').textContent = '–';
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    try{
+      if(typeof pdfjsLib === 'undefined') throw new Error('pdf.js not available');
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      const res = await fetch(API_BASE + '/pdf/' + jobId);
+      if(!res.ok) throw new Error('could not fetch PDF');
+      const buf = await res.arrayBuffer();
+      pdfModalDoc = await pdfjsLib.getDocument({ data: buf }).promise;
+      pdfModalPage = 1;
+      pdfModalScale = 1;
+      loading.style.display = 'none';
+      canvas.style.display = 'block';
+      await renderPdfModalPage();
+    }catch(e){
+      loading.style.display = 'block';
+      loading.className = 'pdf-modal-error';
+      loading.textContent = 'Could not load this PDF. Try downloading it instead.';
+    }
+  };
+
+  async function renderPdfModalPage(){
+    if(!pdfModalDoc) return;
+    const canvas = document.getElementById('pdfCanvas');
+    const body = document.getElementById('pdfModalBody');
+    const page = await pdfModalDoc.getPage(pdfModalPage);
+
+    // Fit the page to the available width by default (mobile-friendly), then apply zoom on top.
+    const rawViewport = page.getViewport({ scale: 1 });
+    const availWidth = Math.max(280, body.clientWidth - 24);
+    pdfModalBaseScale = availWidth / rawViewport.width;
+    const viewport = page.getViewport({ scale: pdfModalBaseScale * pdfModalScale });
+
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+
+    if(pdfModalRenderTask){ try{ pdfModalRenderTask.cancel(); }catch(e){} }
+    pdfModalRenderTask = page.render({ canvasContext: canvas.getContext('2d'), viewport });
+    try{ await pdfModalRenderTask.promise; }catch(e){ /* cancelled render, ignore */ }
+    page.cleanup();
+
+    document.getElementById('pdfPageIndicator').textContent = pdfModalPage + ' / ' + pdfModalDoc.numPages;
+    document.getElementById('pdfPrevBtn').disabled = pdfModalPage <= 1;
+    document.getElementById('pdfNextBtn').disabled = pdfModalPage >= pdfModalDoc.numPages;
   }
-  window.openPdf = openPdf;
+
+  window.pdfPrevPage = function(){
+    if(!pdfModalDoc || pdfModalPage <= 1) return;
+    pdfModalPage--; renderPdfModalPage();
+  };
+  window.pdfNextPage = function(){
+    if(!pdfModalDoc || pdfModalPage >= pdfModalDoc.numPages) return;
+    pdfModalPage++; renderPdfModalPage();
+  };
+  window.pdfZoomIn = function(){
+    if(!pdfModalDoc) return;
+    pdfModalScale = Math.min(3, pdfModalScale + 0.25);
+    renderPdfModalPage();
+  };
+  window.pdfZoomOut = function(){
+    if(!pdfModalDoc) return;
+    pdfModalScale = Math.max(0.5, pdfModalScale - 0.25);
+    renderPdfModalPage();
+  };
+
+  window.closePdfModal = function(){
+    const modal = document.getElementById('pdfModal');
+    modal.classList.remove('open');
+    document.body.style.overflow = '';
+    if(pdfModalRenderTask){ try{ pdfModalRenderTask.cancel(); }catch(e){} pdfModalRenderTask = null; }
+    if(pdfModalDoc){ try{ pdfModalDoc.destroy(); }catch(e){} pdfModalDoc = null; } // avoid the memory leak from before
+    document.getElementById('pdfModalLoading').className = 'pdf-modal-loading';
+  };
+
+  // Close on Escape
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'Escape' && document.getElementById('pdfModal').classList.contains('open')) closePdfModal();
+  });
+
+  // Swipe left/right between pages on touch devices
+  (function(){
+    const body = document.getElementById('pdfModalBody');
+    let touchStartX = null, touchStartY = null;
+    body.addEventListener('touchstart', (e) => {
+      if(e.touches.length !== 1) return;
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+    body.addEventListener('touchend', (e) => {
+      if(touchStartX === null) return;
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      const dy = e.changedTouches[0].clientY - touchStartY;
+      if(Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5){
+        if(dx < 0) window.pdfNextPage(); else window.pdfPrevPage();
+      }
+      touchStartX = null; touchStartY = null;
+    }, { passive: true });
+  })();
+
+  // Re-fit the page if the viewport is resized/rotated while the modal is open
+  window.addEventListener('resize', () => {
+    if(document.getElementById('pdfModal').classList.contains('open') && pdfModalDoc) renderPdfModalPage();
+  });
 
   function renderFilterTabs(){
     const el = document.getElementById('filterTabs');
