@@ -339,7 +339,7 @@
         <button type="button" id="pdfNextBtn" onclick="pdfNextPage()" title="Next page">&#8594;</button>
         <button type="button" onclick="pdfZoomOut()" title="Zoom out">&minus;</button>
         <button type="button" onclick="pdfZoomIn()" title="Zoom in">&plus;</button>
-        <a id="pdfDownloadLink" href="#" title="Download PDF">Download</a>
+        <button type="button" id="pdfPrintBtn" onclick="printPdf()" title="Print PDF">Print</button>
         <button type="button" class="pdf-modal-close" onclick="closePdfModal()" title="Close">&times;</button>
       </div>
     </div>
@@ -434,11 +434,7 @@
     const title = document.getElementById('pdfModalTitle');
     const loading = document.getElementById('pdfModalLoading');
     const canvas = document.getElementById('pdfCanvas');
-    const downloadLink = document.getElementById('pdfDownloadLink');
-
     title.textContent = (job && job.fileName) || 'document.pdf';
-    downloadLink.href = API_BASE + '/pdf/' + jobId;
-    downloadLink.setAttribute('download', (job && job.fileName) || 'document.pdf');
     loading.style.display = 'block';
     loading.textContent = 'Loading document…';
     canvas.style.display = 'none';
@@ -461,7 +457,7 @@
     }catch(e){
       loading.style.display = 'block';
       loading.className = 'pdf-modal-error';
-      loading.textContent = 'Could not load this PDF. Try downloading it instead.';
+      loading.textContent = 'Could not load this PDF. Please try again.';
     }
   };
 
@@ -516,6 +512,30 @@
     if(pdfModalRenderTask){ try{ pdfModalRenderTask.cancel(); }catch(e){} pdfModalRenderTask = null; }
     if(pdfModalDoc){ try{ pdfModalDoc.destroy(); }catch(e){} pdfModalDoc = null; } // avoid the memory leak from before
     document.getElementById('pdfModalLoading').className = 'pdf-modal-loading';
+  };
+
+  window.printPdf = async function(){
+    if(!pdfModalDoc){ showToast('No PDF loaded.'); return; }
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    if(!printWindow){ showToast('Pop-up blocked. Please allow pop-ups for printing.'); return; }
+    printWindow.document.write('<html><head><title>Print</title><style>@page{margin:0.5in;}body{margin:0;}</style></head><body></body></html>');
+    printWindow.document.close();
+    const body = printWindow.document.body;
+    for(let i = 1; i <= pdfModalDoc.numPages; i++){
+      const page = await pdfModalDoc.getPage(i);
+      const viewport = page.getViewport({ scale: 2 });
+      const canvas = printWindow.document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      canvas.style.width = '100%';
+      canvas.style.maxWidth = viewport.width + 'px';
+      canvas.style.pageBreakAfter = i < pdfModalDoc.numPages ? 'always' : 'avoid';
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+      body.appendChild(canvas);
+      page.cleanup();
+    }
+    printWindow.document.close();
+    setTimeout(() => { printWindow.print(); }, 300);
   };
 
   // Close on Escape
