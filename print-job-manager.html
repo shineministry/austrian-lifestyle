@@ -253,6 +253,15 @@
 
   footer{ text-align:center; margin-top: 34px; font-size: 11px; opacity: 0.5; letter-spacing: 0.06em; }
 
+  @media print{
+    *{ visibility:hidden !important; }
+    #printArea, #printArea *{ visibility:visible !important; }
+    #printArea{ display:block !important; position:fixed; top:0; left:0; width:100%; z-index:99999; }
+    #printArea .print-page{ page-break-after:always; page-break-inside:avoid; overflow:hidden; }
+    #printArea .print-page:last-child{ page-break-after:auto; }
+    #printArea img{ display:block; width:100%; height:100%; }
+  }
+
   @media (max-width: 520px){
     .form-row.split{ flex-direction: column; }
     .job-top{ flex-direction: column; }
@@ -607,28 +616,14 @@
       }
       pdf.destroy();
       loading.style.display = 'none';
+      window.print();
     }catch(e){
       loading.textContent = 'Could not load PDF. Please try again.';
     }
   };
 
   window.doPrint = function(){
-    var area = document.getElementById('printArea');
-    if(!area.children.length){ showToast('No pages to print.'); return; }
-    var win = window.open('', '_blank');
-    if(!win){ showToast('Popup blocked. Allow popups.'); return; }
-    var doc = win.document;
-    doc.open();
-    doc.write('<!DOCTYPE html><html><head><title>Print</title><style>');
-    doc.write('body{margin:0;padding:0;}');
-    doc.write('.print-page{page-break-after:always;page-break-inside:avoid;overflow:hidden;}');
-    doc.write('.print-page:last-child{page-break-after:auto;}');
-    doc.write('img{display:block;width:100%;height:100%;}');
-    doc.write('</style></head><body>');
-    doc.write(area.innerHTML);
-    doc.write('</body></html>');
-    doc.close();
-    win.onload = function(){ win.print(); };
+    window.print();
   };
 
   window.closePrintModal = function(){
