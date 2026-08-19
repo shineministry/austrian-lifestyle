@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDF Viewer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  body{ background:#525659; font-family:Arial,sans-serif; }
+  #toolbar{
+    position:fixed; top:0; left:0; right:0; height:40px; z-index:100;
+    background:#323639; display:flex; align-items:center; justify-content:center; gap:8px;
+    border-bottom:1px solid #222; padding:0 12px;
+  }
+  #toolbar button{
+    background:transparent; border:1px solid #555; color:#ddd; padding:4px 10px;
+    border-radius:3px; cursor:pointer; font-size:13px;
+  }
+  #toolbar button:hover{ background:#555; }
+  #toolbar button:disabled{ opacity:0.3; cursor:default; }
+  #toolbar span{ color:#ccc; font-size:13px; min-width:60px; text-align:center; }
+  #toolbar .title{ flex:1; text-align:left; color:#aaa; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-right:8px; }
+  #container{ margin-top:40px; display:flex; flex-direction:column; align-items:center; gap:8px; padding:8px; }
+  .page{ background:#fff; box-shadow:0 2px 8px rgba(0,0,0,0.4); }
+</style>
+</head>
+<body>
+<div id="toolbar">
+  <div class="title" id="docTitle"></div>
+  <button id="prevBtn" onclick="prevPage()">&#8592;</button>
+  <span id="pageNum">1 / 1</span>
+  <button id="nextBtn" onclick="nextPage()">&#8594;</button>
+  <button onclick="zoomOut()">&minus;</button>
+  <button onclick="zoomIn()">&plus;</button>
+  <button onclick="doPrint()">Print</button>
+</div>
+<div id="container"></div>
+<script>
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  var pdfDoc = null, currentPage = 1, scale = 1.5, baseScale = 1.5;
+
+  var params = new URLSearchParams(window.location.search);
+  var fileUrl = params.get('file');
+  document.getElementById('docTitle').textContent = params.get('title') || 'Document';
+
+  if(fileUrl){
+    pdfjsLib.getDocument(decodeURIComponent(fileUrl)).promise.then(function(pdf){
+      pdfDoc = pdf;
+      document.getElementById('pageNum').textContent = '1 / ' + pdf.numPages;
+      renderAll();
+    });
+  }
+
+  function renderAll(){
+    if(!pdfDoc) return;
+    var container = document.getElementById('container');
+    container.innerHTML = '';
+    for(var i = 1; i <= pdfDoc.numPages; i++){
+      (function(pageNum){
+        pdfDoc.getPage(pageNum).then(function(page){
+          var vp = page.getViewport({ scale: scale });
+          var c = document.createElement('canvas');
+          c.className = 'page';
+          c.width = vp.width; c.height = vp.height;
+          c.style.width = vp.width + 'px'; c.style.height = vp.height + 'px';
+          container.appendChild(c);
+          page.render({ canvasContext: c.getContext('2d'), viewport: vp });
+        });
+      })(i);
+    }
+  }
+
+  function updatePageNum(){
+    if(!pdfDoc) return;
+    var pages = document.querySelectorAll('.page');
+    var mid = window.innerHeight / 2;
+    for(var i = 0; i < pages.length; i++){
+      var r = pages[i].getBoundingClientRect();
+      if(r.top <= mid && r.bottom >= mid){
+        currentPage = i + 1; break;
+      }
+    }
+    document.getElementById('pageNum').textContent = currentPage + ' / ' + pdfDoc.numPages;
+    document.getElementById('prevBtn').disabled = currentPage <= 1;
+    document.getElementById('nextBtn').disabled = currentPage >= pdfDoc.numPages;
+  }
+
+  window.addEventListener('scroll', updatePageNum);
+
+  function prevPage(){
+    if(currentPage <= 1) return;
+    var pages = document.querySelectorAll('.page');
+    if(pages[currentPage - 2]) pages[currentPage - 2].scrollIntoView({ behavior:'smooth' });
+  }
+  function nextPage(){
+    if(!pdfDoc || currentPage >= pdfDoc.numPages) return;
+    var pages = document.querySelectorAll('.page');
+    if(pages[currentPage]) pages[currentPage].scrollIntoView({ behavior:'smooth' });
+  }
+  function zoomIn(){
+    scale = Math.min(4, scale + 0.25);
+    renderAll();
+  }
+  function zoomOut(){
+    scale = Math.max(0.5, scale - 0.25);
+    renderAll();
+  }
+  function doPrint(){
+    window.print();
+  }
+</script>
+</body>
+</html>

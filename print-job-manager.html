@@ -253,15 +253,6 @@
 
   footer{ text-align:center; margin-top: 34px; font-size: 11px; opacity: 0.5; letter-spacing: 0.06em; }
 
-  @media print{
-    *{ visibility:hidden !important; }
-    #printArea, #printArea *{ visibility:visible !important; }
-    #printArea{ display:block !important; position:fixed; top:0; left:0; width:100%; z-index:99999; }
-    #printArea .print-page{ page-break-after:always; page-break-inside:avoid; overflow:hidden; }
-    #printArea .print-page:last-child{ page-break-after:auto; }
-    #printArea img{ display:block; width:100%; height:100%; }
-  }
-
   @media (max-width: 520px){
     .form-row.split{ flex-direction: column; }
     .job-top{ flex-direction: column; }
@@ -341,27 +332,11 @@
 
 <div class="toast" id="toast"></div>
 
-<div id="printArea" style="display:none;"></div>
 
 <div class="pdf-modal" id="pdfModal">
   <div class="pdf-modal-backdrop" onclick="closePdfModal()"></div>
-  <div class="pdf-modal-content">
-    <div class="pdf-modal-header">
-      <div class="pdf-modal-title" id="pdfModalTitle">document.pdf</div>
-      <div class="pdf-modal-controls">
-        <button type="button" id="pdfPrevBtn" onclick="pdfPrevPage()" title="Previous page">&#8592;</button>
-        <span class="pdf-page-indicator" id="pdfPageIndicator">–</span>
-        <button type="button" id="pdfNextBtn" onclick="pdfNextPage()" title="Next page">&#8594;</button>
-        <button type="button" onclick="pdfZoomOut()" title="Zoom out">&minus;</button>
-        <button type="button" onclick="pdfZoomIn()" title="Zoom in">&plus;</button>
-        <button type="button" id="pdfPrintBtn" onclick="printPdf()" title="Print PDF">Print</button>
-        <button type="button" class="pdf-modal-close" onclick="closePdfModal()" title="Close">&times;</button>
-      </div>
-    </div>
-    <div class="pdf-modal-body" id="pdfModalBody">
-      <div class="pdf-modal-loading" id="pdfModalLoading">Loading document…</div>
-      <canvas id="pdfCanvas" style="display:none;"></canvas>
-    </div>
+  <div class="pdf-modal-content" style="padding:0;overflow:hidden;">
+    <iframe id="pdfFrame" style="width:100%;height:100%;border:none;"></iframe>
   </div>
 </div>
 
@@ -449,139 +424,30 @@
   }
 
   // ---- In-page PDF viewer modal (PDF.js) ----
-  let pdfModalDoc = null;
-  let pdfModalPage = 1;
-  let pdfModalScale = 1;
-  let pdfModalBaseScale = 1;
-  let pdfModalRenderTask = null;
-
   let currentPdfJobId = null;
 
-  window.openPdf = async function(jobId){
+  window.openPdf = function(jobId){
     currentPdfJobId = jobId;
-    const job = jobs.find(j => j.id === jobId);
-    const modal = document.getElementById('pdfModal');
-    const title = document.getElementById('pdfModalTitle');
-    const loading = document.getElementById('pdfModalLoading');
-    const canvas = document.getElementById('pdfCanvas');
-    title.textContent = (job && job.fileName) || 'document.pdf';
-    loading.style.display = 'block';
-    loading.textContent = 'Loading document…';
-    canvas.style.display = 'none';
-    document.getElementById('pdfPageIndicator').textContent = '–';
+    var job = jobs.find(function(j){ return j.id === jobId; });
+    var modal = document.getElementById('pdfModal');
+    var frame = document.getElementById('pdfFrame');
+    var viewerUrl = 'pdf-viewer.html?file=' + encodeURIComponent(API_BASE + '/pdf/' + jobId) + '&title=' + encodeURIComponent((job && job.fileName) || 'document.pdf');
+    frame.src = viewerUrl;
     modal.classList.add('open');
     document.body.style.overflow = 'hidden';
-
-    try{
-      if(typeof pdfjsLib === 'undefined') throw new Error('pdf.js not available');
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-      var buf;
-      if(pdfCache.has(jobId)){
-        buf = pdfCache.get(jobId);
-        pdfCache.delete(jobId);
-      }else{
-        var res = await fetch(API_BASE + '/pdf/' + jobId);
-        if(!res.ok) throw new Error('could not fetch PDF');
-        buf = await res.arrayBuffer();
-      }
-      pdfModalDoc = await pdfjsLib.getDocument({ data: buf }).promise;
-      pdfModalPage = 1;
-      pdfModalScale = 1;
-      loading.style.display = 'none';
-      canvas.style.display = 'block';
-      await renderPdfModalPage();
-    }catch(e){
-      loading.style.display = 'block';
-      loading.className = 'pdf-modal-error';
-      loading.textContent = 'Could not load this PDF. Please try again.';
-    }
-  };
-
-  async function renderPdfModalPage(){
-    if(!pdfModalDoc) return;
-    const canvas = document.getElementById('pdfCanvas');
-    const body = document.getElementById('pdfModalBody');
-    const page = await pdfModalDoc.getPage(pdfModalPage);
-
-    // Fit the page to the available width by default (mobile-friendly), then apply zoom on top.
-    const rawViewport = page.getViewport({ scale: 1 });
-    const availWidth = Math.max(280, body.clientWidth - 24);
-    pdfModalBaseScale = availWidth / rawViewport.width;
-    var dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const viewport = page.getViewport({ scale: pdfModalBaseScale * pdfModalScale * dpr });
-
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-    canvas.style.width = (viewport.width / dpr) + 'px';
-    canvas.style.height = (viewport.height / dpr) + 'px';
-
-    if(pdfModalRenderTask){ try{ pdfModalRenderTask.cancel(); }catch(e){} }
-    pdfModalRenderTask = page.render({ canvasContext: canvas.getContext('2d'), viewport });
-    try{ await pdfModalRenderTask.promise; }catch(e){ /* cancelled render, ignore */ }
-    page.cleanup();
-
-    document.getElementById('pdfPageIndicator').textContent = pdfModalPage + ' / ' + pdfModalDoc.numPages;
-    document.getElementById('pdfPrevBtn').disabled = pdfModalPage <= 1;
-    document.getElementById('pdfNextBtn').disabled = pdfModalPage >= pdfModalDoc.numPages;
-  }
-
-  window.pdfPrevPage = function(){
-    if(!pdfModalDoc || pdfModalPage <= 1) return;
-    pdfModalPage--; renderPdfModalPage();
-  };
-  window.pdfNextPage = function(){
-    if(!pdfModalDoc || pdfModalPage >= pdfModalDoc.numPages) return;
-    pdfModalPage++; renderPdfModalPage();
-  };
-  window.pdfZoomIn = function(){
-    if(!pdfModalDoc) return;
-    pdfModalScale = Math.min(3, pdfModalScale + 0.25);
-    renderPdfModalPage();
-  };
-  window.pdfZoomOut = function(){
-    if(!pdfModalDoc) return;
-    pdfModalScale = Math.max(0.5, pdfModalScale - 0.25);
-    renderPdfModalPage();
   };
 
   window.closePdfModal = function(){
-    const modal = document.getElementById('pdfModal');
+    var modal = document.getElementById('pdfModal');
+    var frame = document.getElementById('pdfFrame');
     modal.classList.remove('open');
     document.body.style.overflow = '';
-    if(pdfModalRenderTask){ try{ pdfModalRenderTask.cancel(); }catch(e){} pdfModalRenderTask = null; }
-    if(pdfModalDoc){ try{ pdfModalDoc.destroy(); }catch(e){} pdfModalDoc = null; } // avoid the memory leak from before
-    document.getElementById('pdfModalLoading').className = 'pdf-modal-loading';
+    frame.src = '';
   };
 
-
-  window.printPdf = async function(){
-    if(!pdfModalDoc){ showToast('No PDF loaded.'); return; }
-    try{
-      var area = document.getElementById('printArea');
-      area.innerHTML = '';
-      for(var i = 1; i <= pdfModalDoc.numPages; i++){
-        var page = await pdfModalDoc.getPage(i);
-        var vp = page.getViewport({ scale: 2 });
-        var c = document.createElement('canvas');
-        c.width = vp.width; c.height = vp.height;
-        await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
-        page.cleanup();
-        var dataUrl = c.toDataURL('image/jpeg', 0.95);
-        c.width = 0; c.height = 0; c = null;
-        var pw = (vp.width * 72 / 96).toFixed(0);
-        var ph = (vp.height * 72 / 96).toFixed(0);
-        var div = document.createElement('div');
-        div.className = 'print-page';
-        div.style.cssText = 'width:'+pw+'pt;height:'+ph+'pt;overflow:hidden;';
-        var img = document.createElement('img');
-        img.src = dataUrl;
-        img.style.cssText = 'display:block;width:100%;height:100%;';
-        div.appendChild(img);
-        area.appendChild(div);
-      }
-      window.print();
-      area.innerHTML = '';
-    }catch(e){}
+  window.printPdf = function(){
+    var frame = document.getElementById('pdfFrame');
+    if(frame.contentWindow) frame.contentWindow.print();
   };
 
   // Close on Escape
