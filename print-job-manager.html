@@ -6,6 +6,7 @@
 <title>Print Job Docket</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%232b2620'/%3E%3Crect x='14' y='10' width='36' height='16' rx='2' fill='%23f6f1e4'/%3E%3Crect x='10' y='24' width='44' height='22' rx='3' fill='%23b3452c'/%3E%3Crect x='18' y='36' width='28' height='18' rx='1' fill='%23f6f1e4'/%3E%3Ccircle cx='46' cy='30' r='2.5' fill='%234a6b53'/%3E%3C/svg%3E">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js" as="worker">
 <style>
   :root{
     --kraft: #d9c9a3;
@@ -367,6 +368,18 @@
 <script>
   const API_BASE = "https://shark.shinumaths989.workers.dev";
   const CACHE_KEY = "print-queue-cache-v1";
+  const pdfCache = new Map();
+
+  async function prefetchPdf(jobId){
+    if(pdfCache.has(jobId)) return;
+    try{
+      var res = await fetch(API_BASE + '/pdf/' + jobId);
+      if(res.ok){
+        var buf = await res.arrayBuffer();
+        pdfCache.set(jobId, buf);
+      }
+    }catch(e){}
+  }
 
   let jobs = [];
   let editingId = null;
@@ -462,9 +475,15 @@
     try{
       if(typeof pdfjsLib === 'undefined') throw new Error('pdf.js not available');
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-      const res = await fetch(API_BASE + '/pdf/' + jobId);
-      if(!res.ok) throw new Error('could not fetch PDF');
-      const buf = await res.arrayBuffer();
+      var buf;
+      if(pdfCache.has(jobId)){
+        buf = pdfCache.get(jobId);
+        pdfCache.delete(jobId);
+      }else{
+        var res = await fetch(API_BASE + '/pdf/' + jobId);
+        if(!res.ok) throw new Error('could not fetch PDF');
+        buf = await res.arrayBuffer();
+      }
       pdfModalDoc = await pdfjsLib.getDocument({ data: buf }).promise;
       pdfModalPage = 1;
       pdfModalScale = 1;
@@ -488,10 +507,13 @@
     const rawViewport = page.getViewport({ scale: 1 });
     const availWidth = Math.max(280, body.clientWidth - 24);
     pdfModalBaseScale = availWidth / rawViewport.width;
-    const viewport = page.getViewport({ scale: pdfModalBaseScale * pdfModalScale });
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const viewport = page.getViewport({ scale: pdfModalBaseScale * pdfModalScale * dpr });
 
     canvas.width = viewport.width;
     canvas.height = viewport.height;
+    canvas.style.width = (viewport.width / dpr) + 'px';
+    canvas.style.height = (viewport.height / dpr) + 'px';
 
     if(pdfModalRenderTask){ try{ pdfModalRenderTask.cancel(); }catch(e){} }
     pdfModalRenderTask = page.render({ canvasContext: canvas.getContext('2d'), viewport });
@@ -712,7 +734,7 @@
           `;
         }
         const docPreview = job.hasFile
-          ? `<a class="doc-bubble" href="javascript:void(0)" onclick="openPdf('${job.id}')">
+          ? `<a class="doc-bubble" href="javascript:void(0)" onclick="openPdf('${job.id}')" onmouseenter="prefetchPdf('${job.id}')">
                <div class="doc-icon" id="thumb-${job.id}"></div>
                <div class="doc-info">
                  <div class="doc-fname">${escapeHtml(job.fileName || 'document.pdf')}</div>
