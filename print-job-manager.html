@@ -225,6 +225,9 @@
     padding: 18px 10px 40px; -webkit-overflow-scrolling: touch; touch-action: pan-y pinch-zoom;
     background: repeating-linear-gradient(45deg, #cabb92, #cabb92 10px, #c3b389 10px, #c3b389 20px);
   }
+  #printModalBody{padding:0;overflow:hidden;}
+  #printModalBody iframe{width:100%;height:100%;border:none;}
+
   .pdf-modal-body canvas{
     background:#fff; box-shadow: 0 6px 24px rgba(0,0,0,0.35); max-width: 100%; height:auto;
   }
@@ -339,13 +342,29 @@
         <button type="button" id="pdfNextBtn" onclick="pdfNextPage()" title="Next page">&#8594;</button>
         <button type="button" onclick="pdfZoomOut()" title="Zoom out">&minus;</button>
         <button type="button" onclick="pdfZoomIn()" title="Zoom in">&plus;</button>
-        <button type="button" id="pdfPrintBtn" onclick="printPdf()" title="Open PDF for printing">Print</button>
+        <button type="button" id="pdfPrintBtn" onclick="printPdf()" title="Print PDF">Print</button>
         <button type="button" class="pdf-modal-close" onclick="closePdfModal()" title="Close">&times;</button>
       </div>
     </div>
     <div class="pdf-modal-body" id="pdfModalBody">
       <div class="pdf-modal-loading" id="pdfModalLoading">Loading document…</div>
       <canvas id="pdfCanvas" style="display:none;"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="pdf-modal" id="printModal">
+  <div class="pdf-modal-backdrop" onclick="closePrintModal()"></div>
+  <div class="pdf-modal-content">
+    <div class="pdf-modal-header">
+      <div class="pdf-modal-title" id="printModalTitle">Print Preview</div>
+      <div class="pdf-modal-controls">
+        <button type="button" id="printModalBtn" onclick="document.getElementById('printModalBody').contentWindow.print();" style="background:rgba(246,241,228,0.2);font-weight:bold;">Print</button>
+        <button type="button" class="pdf-modal-close" onclick="closePrintModal()" title="Close">&times;</button>
+      </div>
+    </div>
+    <div class="pdf-modal-body" id="printModalBodyWrap" style="padding:0;">
+      <div class="pdf-modal-loading" id="printModalLoading">Preparing print…</div>
     </div>
   </div>
 </div>
@@ -522,7 +541,14 @@
     try{
       document.getElementById('pdfModal').classList.remove('open');
       document.body.style.overflow = '';
-      showToast('Preparing print...');
+      var printModal = document.getElementById('printModal');
+      var loading = document.getElementById('printModalLoading');
+      var wrap = document.getElementById('printModalBodyWrap');
+      loading.style.display = 'block';
+      loading.textContent = 'Preparing print...';
+      wrap.querySelector('iframe') && wrap.removeChild(wrap.querySelector('iframe'));
+      printModal.classList.add('open');
+      document.body.style.overflow = 'hidden';
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
       const res = await fetch(API_BASE + '/pdf/' + currentPdfJobId);
       if(!res.ok) throw new Error('fetch failed');
@@ -541,11 +567,22 @@
         await new Promise(function(r){ setTimeout(r, 10); });
       }
       pdf.destroy();
-      var w = window.open('', '_blank');
-      w.document.write('<!DOCTYPE html><html><head><title>Print</title><style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:Arial,sans-serif;padding-top:60px;}@page{margin:0.4in;}#printBar{position:fixed;top:0;left:0;right:0;z-index:9999;background:#1a73e8;padding:12px 20px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.2);}#printBtn{background:#fff;color:#1a73e8;border:none;padding:10px 32px;font-size:16px;font-weight:bold;border-radius:6px;cursor:pointer;}#printBtn:hover{background:#e8f0fe;}img{display:block;width:100%;}@media print{#printBar{display:none!important;}body{padding-top:0;}}</style></head><body><div id="printBar"><button id="printBtn" onclick="window.print();">Print</button></div>' + imgs + '</body></html>');
-      w.document.close();
-      w.onload = function(){ setTimeout(function(){ w.focus(); w.print(); }, 300); };
-    }catch(e){ showToast('Could not load PDF for printing.'); }
+      var html = '<!DOCTYPE html><html><head><title>Print</title><style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:Arial,sans-serif;padding-top:50px;}@page{margin:0.4in;}#printBar{position:fixed;top:0;left:0;right:0;z-index:9999;background:#1a73e8;padding:10px 20px;text-align:center;}#printBtn{background:#fff;color:#1a73e8;border:none;padding:8px 28px;font-size:15px;font-weight:bold;border-radius:6px;cursor:pointer;}img{display:block;width:100%;}@media print{#printBar{display:none!important;}body{padding-top:0;}}</style></head><body><div id="printBar"><button id="printBtn" onclick="parent.closePrintModal();setTimeout(function(){window.print();},200);">Print</button></div>' + imgs + '</body></html>';
+      var iframe = document.createElement('iframe');
+      iframe.style.cssText = 'width:100%;height:100%;border:none;';
+      wrap.appendChild(iframe);
+      iframe.contentDocument.write(html);
+      iframe.contentDocument.close();
+      loading.style.display = 'none';
+    }catch(e){ loading.textContent = 'Could not load PDF.'; }
+  };
+
+  window.closePrintModal = function(){
+    document.getElementById('printModal').classList.remove('open');
+    document.body.style.overflow = '';
+    var wrap = document.getElementById('printModalBodyWrap');
+    var iframe = wrap.querySelector('iframe');
+    if(iframe) wrap.removeChild(iframe);
   };
 
   // Close on Escape
