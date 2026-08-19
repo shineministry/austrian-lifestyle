@@ -225,8 +225,8 @@
     padding: 18px 10px 40px; -webkit-overflow-scrolling: touch; touch-action: pan-y pinch-zoom;
     background: repeating-linear-gradient(45deg, #cabb92, #cabb92 10px, #c3b389 10px, #c3b389 20px);
   }
-  #printModalBodyWrap{padding:0;overflow:auto;display:flex;flex-direction:column;align-items:center;}
-  #printModalBodyWrap img{display:block;width:100%;max-width:100%;flex-shrink:0;}
+  #printModalBodyWrap{padding:0;overflow:auto;display:flex;flex-direction:column;align-items:stretch;}
+  #printModalBodyWrap img{display:block;width:100%;flex-shrink:0;}
 
   .pdf-modal-body canvas{
     background:#fff; box-shadow: 0 6px 24px rgba(0,0,0,0.35); max-width: 100%; height:auto;
@@ -253,12 +253,14 @@
   footer{ text-align:center; margin-top: 34px; font-size: 11px; opacity: 0.5; letter-spacing: 0.06em; }
 
   @media print{
-    body *{ visibility: hidden; }
-    #printModal, #printModal *{ visibility: visible; }
-    #printModal{ position: static; background: none; }
+    *{ visibility: hidden !important; margin: 0 !important; padding: 0 !important; }
+    #printModal, #printModal *{ visibility: visible !important; }
+    #printModal{ position: absolute; top: 0; left: 0; width: 100%; background: none; border: none; }
     #printModal .pdf-modal-header, #printModal .pdf-modal-backdrop{ display: none !important; }
-    #printModal .pdf-modal-content{ position: static; box-shadow: none; border: none; background: #fff; }
-    #printModal .pdf-modal-body{ overflow: visible; padding: 0; background: #fff; }
+    #printModal .pdf-modal-content{ position: static; box-shadow: none; border: none; background: none; padding: 0; }
+    #printModal .pdf-modal-body{ overflow: visible; padding: 0; background: none; display: block; }
+    #printModalBodyWrap{ overflow: visible; display: block; }
+    #printModalBodyWrap img{ page-break-after: avoid; page-break-inside: avoid; }
   }
 
   @media (max-width: 520px){
