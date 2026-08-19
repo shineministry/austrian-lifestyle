@@ -549,9 +549,11 @@
       var buf = await res.arrayBuffer();
       var pdf = await pdfjsLib.getDocument({ data: buf }).promise;
       var images = [];
+      var pageSizes = [];
       for(var i = 1; i <= pdf.numPages; i++){
         var page = await pdf.getPage(i);
         var vp = page.getViewport({ scale: 1.5 });
+        pageSizes.push({ w: vp.width, h: vp.height });
         var c = document.createElement('canvas');
         c.width = vp.width; c.height = vp.height;
         await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
@@ -559,13 +561,16 @@
         images.push(c.toDataURL('image/jpeg', 0.95));
         c.width = 0; c.height = 0; c = null;
         status.textContent = 'Rendering page ' + i + ' of ' + pdf.numPages + '...';
-        await new Promise(function(r){ setTimeout(r, 10); });
       }
       pdf.destroy();
       var html = '<!DOCTYPE html><html><head><title>Print</title><style>';
-      html += '@page{margin:0;size:portrait;}';
       html += 'body{margin:0;padding:0;}';
-      html += 'img{display:block;width:100%;max-height:100vh;object-fit:contain;page-break-after:always;page-break-inside:avoid;}';
+      for(var k = 0; k < images.length; k++){
+        var pw = (pageSizes[k].w * 72 / 96).toFixed(0);
+        var ph = (pageSizes[k].h * 72 / 96).toFixed(0);
+        html += '@page:nth-of-type('+(k+1)+'){size:'+pw+'pt '+ph+'pt;margin:0;}';
+      }
+      html += 'img{display:block;width:100%;page-break-after:always;page-break-inside:avoid;}';
       html += 'img:last-child{page-break-after:auto;}';
       html += '</style></head><body>';
       for(var j = 0; j < images.length; j++){
@@ -574,7 +579,7 @@
       html += '</body></html>';
       if(printIframe){ try{ printIframe.remove(); }catch(e){} }
       printIframe = document.createElement('iframe');
-      printIframe.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;border:none;opacity:0;pointer-events:none;';
+      printIframe.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;border:none;opacity:0;pointer-events:none;';
       document.body.appendChild(printIframe);
       printIframe.onload = function(){
         setTimeout(function(){
@@ -582,7 +587,7 @@
           printIframe.contentWindow.print();
           status.textContent = '';
           btn.style.display = '';
-        }, 500);
+        }, 150);
       };
       printIframe.srcdoc = html;
     }catch(e){
