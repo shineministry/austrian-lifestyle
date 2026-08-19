@@ -528,51 +528,28 @@
       if(!res.ok) throw new Error('fetch failed');
       const buf = await res.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
-      var html = '<html><head><title>Print</title><style>';
-      html += '@page{margin:0.5in;}body{margin:0;padding:20px;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#000;line-height:1.4;background:#fff;}';
-      html += '.page{page-break-after:always;}.page:last-child{page-break-after:auto;}';
-      html += '.line{white-space:pre;min-height:1em;}.bold{font-weight:bold;}.italic{font-style:italic;}';
-      html += 'table{border-collapse:collapse;width:100%;margin:4px 0;}td{border:1px solid #333;padding:3px 6px;font-size:12px;white-space:pre;}';
-      html += '</style></head><body>';
-      for(var i = 1; i <= pdf.numPages; i++){
-        var page = await pdf.getPage(i);
-        var tc = await page.getTextContent();
-        var items = tc.items;
-        var lines = {};
-        for(var j = 0; j < items.length; j++){
-          var it = items[j];
-          var y = Math.round(-it.transform[5]);
-          if(!lines[y]) lines[y] = [];
-          lines[y].push({ x: it.transform[4], str: it.str, font: it.fontName || '', h: it.height || 12 });
-        }
-        var ys = Object.keys(lines).map(Number).sort(function(a,b){ return a - b; });
-        var prevY = 0;
-        html += '<div class="page">';
-        for(var k = 0; k < ys.length; k++){
-          var y = ys[k];
-          if(prevY && (y - prevY) > 20) html += '<br>';
-          prevY = y;
-          var sorted = lines[y].sort(function(a,b){ return a.x - b.x; });
-          var lineText = '';
-          var isBold = false;
-          for(var m = 0; m < sorted.length; m++){
-            var s = sorted[m];
-            if(s.font.toLowerCase().indexOf('bold') !== -1) isBold = true;
-            if(m > 0 && s.x - sorted[m-1].x > 20) lineText += '    ';
-            lineText += s.str;
-          }
-          html += '<div class="line' + (isBold ? ' bold' : '') + '">' + lineText.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>';
-        }
-        html += '</div>';
+      const images = [];
+      for(let i = 1; i <= pdf.numPages; i++){
+        const page = await pdf.getPage(i);
+        const vp = page.getViewport({ scale: 2.5 });
+        const c = document.createElement('canvas');
+        c.width = vp.width; c.height = vp.height;
+        await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
         page.cleanup();
-        await new Promise(function(r){ setTimeout(r, 20); });
+        images.push(c.toDataURL('image/jpeg', 0.92));
+        c.width = 0; c.height = 0;
+        await new Promise(function(r){ setTimeout(r, 10); });
       }
-      html += '</body></html>';
       pdf.destroy();
       var w = window.open('');
-      w.document.write(html);
+      var h = '<html><head><title>Print</title><style>@page{margin:0.3in;}body{margin:0;padding:0;background:#fff;text-align:center;}img{display:block;width:100%;max-width:100%;margin:0 auto;}@media print{img{page-break-after:always;}img:last-child{page-break-after:auto;}}</style></head><body>';
+      for(var k = 0; k < images.length; k++){
+        h += '<img src="' + images[k] + '">';
+      }
+      h += '</body></html>';
+      w.document.write(h);
       w.document.close();
-      setTimeout(function(){ w.print(); }, 400);
+      setTimeout(function(){ w.print(); }, 500);
     }catch(e){ showToast('Could not load PDF for printing.'); }
   };
 
