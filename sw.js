@@ -1,4 +1,4 @@
-const CACHE_NAME = 'austrian-lifestyle-v3';
+const CACHE_NAME = 'austrian-lifestyle-v4';
 const LOCAL_FILES = [
   'index.html',
   'student-dashboard.html',
@@ -52,6 +52,20 @@ self.addEventListener('fetch', event => {
 
   /* Firebase SDK — network first, cache fallback */
   if (url.hostname.includes('gstatic.com')) {
+    event.respondWith(
+      fetch(event.request).then(response => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        }
+        return response;
+      }).catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  /* Print Job Manager — network first, never stale */
+  if (url.pathname.includes('print-job-manager')) {
     event.respondWith(
       fetch(event.request).then(response => {
         if (response.ok) {
