@@ -455,30 +455,6 @@
     if(e.key === 'Escape' && document.getElementById('pdfModal').classList.contains('open')) closePdfModal();
   });
 
-  // Swipe left/right between pages on touch devices
-  (function(){
-    const body = document.getElementById('pdfModalBody');
-    let touchStartX = null, touchStartY = null;
-    body.addEventListener('touchstart', (e) => {
-      if(e.touches.length !== 1) return;
-      touchStartX = e.touches[0].clientX;
-      touchStartY = e.touches[0].clientY;
-    }, { passive: true });
-    body.addEventListener('touchend', (e) => {
-      if(touchStartX === null) return;
-      const dx = e.changedTouches[0].clientX - touchStartX;
-      const dy = e.changedTouches[0].clientY - touchStartY;
-      if(Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5){
-        if(dx < 0) window.pdfNextPage(); else window.pdfPrevPage();
-      }
-      touchStartX = null; touchStartY = null;
-    }, { passive: true });
-  })();
-
-  // Re-fit the page if the viewport is resized/rotated while the modal is open
-  window.addEventListener('resize', () => {
-    if(document.getElementById('pdfModal').classList.contains('open') && pdfModalDoc) renderPdfModalPage();
-  });
 
   function renderFilterTabs(){
     const el = document.getElementById('filterTabs');
