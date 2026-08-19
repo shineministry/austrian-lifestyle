@@ -545,9 +545,7 @@
 
   window.printPdf = function(){
     if(!currentPdfJobId){ showToast('No PDF loaded.'); return; }
-    document.getElementById('pdfModal').classList.remove('open');
-    document.body.style.overflow = '';
-    window.open(API_BASE + '/pdf/' + currentPdfJobId, '_blank');
+    window.print();
   };
 
   // Close on Escape
