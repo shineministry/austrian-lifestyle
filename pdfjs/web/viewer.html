@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html dir="ltr" mozdisallowselectionprint>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="google" content="notranslate">
+  <title>PDF.js viewer</title>
+  <link rel="stylesheet" href="pdf_viewer.css">
+  <script src="../build/pdf.min.js"></script>
+  <script src="../build/pdf.worker.min.js"></script>
+</head>
+<body tabindex="0">
+  <div id="outerContainer">
+    <div id="sidebarContainer">
+      <div id="toolbarSidebar" class="toolbarHorizontalGroup">
+        <div id="toolbarSidebarLeft">
+          <div id="sidebarViewButtons" class="toolbarHorizontalGroup toggled" role="radiogroup">
+            <button id="viewThumbnail" class="toolbarButton toggled" type="button" tabindex="0" role="radio" aria-checked="true" aria-controls="thumbnailView">
+               <span>Thumbnail</span>
+            </button>
+            <button id="viewOutline" class="toolbarButton" type="button" tabindex="0" role="radio" aria-checked="false" aria-controls="outlineView">
+               <span>Outline</span>
+            </button>
+            <button id="viewAttachments" class="toolbarButton" type="button" tabindex="0" role="radio" aria-checked="false" aria-controls="attachmentsView">
+               <span>Attachments</span>
+            </button>
+          </div>
+        </div>
+        <div id="toolbarSidebarRight">
+          <div id="outlineOptionsContainer" class="toolbarHorizontalGroup">
+            <div class="verticalToolbarSeparator"></div>
+            <button id="currentOutlineItem" class="toolbarButton" type="button" disabled="disabled" tabindex="0">
+              <span>Current Outline Item</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div id="sidebarContent">
+        <div id="thumbnailView"></div>
+        <div id="outlineView" class="hidden"></div>
+        <div id="attachmentsView" class="hidden"></div>
+      </div>
+      <div id="sidebarResizer"></div>
+    </div>
+
+    <div id="mainContainer">
+      <div class="toolbar">
+        <div id="toolbarContainer">
+          <div id="toolbarViewer" class="toolbarHorizontalGroup">
+            <div id="toolbarViewerLeft" class="toolbarHorizontalGroup">
+              <button id="sidebarToggle" class="toolbarButton" type="button" tabindex="0" aria-expanded="false" aria-haspopup="true" aria-controls="sidebarContainer">
+                <span>Toggle Sidebar</span>
+              </button>
+              <div class="toolbarButtonSpacer"></div>
+              <div class="toolbarButtonWithContainer">
+                <button id="viewFind" class="toolbarButton" type="button" tabindex="0" aria-expanded="false" aria-controls="findbar">
+                  <span>Find</span>
+                </button>
+                <div class="hidden doorHanger toolbarHorizontalGroup" id="findbar">
+                  <div id="findInputContainer" class="toolbarHorizontalGroup">
+                    <span class="loadingInput end toolbarHorizontalGroup">
+                      <input id="findInput" class="toolbarField" tabindex="0" aria-invalid="false">
+                    </span>
+                    <div class="toolbarHorizontalGroup">
+                      <button id="findPrevious" class="toolbarButton" type="button" tabindex="0">
+                        <span>Previous</span>
+                      </button>
+                      <div class="splitToolbarButtonSeparator"></div>
+                      <button id="findNext" class="toolbarButton" type="button" tabindex="0">
+                        <span>Next</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div id="findbarOptionsOneContainer" class="toolbarHorizontalGroup">
+                    <div class="toggleButton toolbarLabel">
+                      <input type="checkbox" id="findHighlightAll" tabindex="0" />
+                      <label for="findHighlightAll">Highlight All</label>
+                    </div>
+                    <div class="toggleButton toolbarLabel">
+                      <input type="checkbox" id="findMatchCase" tabindex="0" />
+                      <label for="findMatchCase">Match Case</label>
+                    </div>
+                  </div>
+                  <div id="findbarOptionsTwoContainer" class="toolbarHorizontalGroup">
+                    <div class="toggleButton toolbarLabel">
+                      <input type="checkbox" id="findMatchDiacritics" tabindex="0" />
+                      <label for="findMatchDiacritics">Match Diacritics</label>
+                    </div>
+                    <div class="toggleButton toolbarLabel">
+                      <input type="checkbox" id="findEntireWord" tabindex="0" />
+                      <label for="findEntireWord">Entire Word</label>
+                    </div>
+                  </div>
+                  <div id="findbarMessageContainer" class="toolbarHorizontalGroup" aria-live="polite">
+                    <span id="findResultsCount" class="toolbarLabel"></span>
+                    <span id="findMsg" class="toolbarLabel"></span>
+                  </div>
+                </div>
+              </div>
+              <div class="toolbarHorizontalGroup hiddenSmallView">
+                <button class="toolbarButton" type="button" id="previous" tabindex="0">
+                  <span>Previous</span>
+                </button>
+                <div class="splitToolbarButtonSeparator"></div>
+                <button class="toolbarButton" type="button" id="next" tabindex="0">
+                  <span>Next</span>
+                </button>
+              </div>
+              <div class="toolbarHorizontalGroup">
+                <span class="loadingInput start toolbarHorizontalGroup">
+                  <input type="number" id="pageNumber" class="toolbarField" value="1" min="1" tabindex="0" autocomplete="off">
+                </span>
+                <span id="numPages" class="toolbarLabel"></span>
+              </div>
+            </div>
+            <div id="toolbarViewerMiddle" class="toolbarHorizontalGroup">
+              <div class="toolbarHorizontalGroup">
+                <button id="zoomOut" class="toolbarButton" type="button" tabindex="0">
+                  <span>Zoom Out</span>
+                </button>
+                <div class="splitToolbarButtonSeparator"></div>
+                <button id="zoomIn" class="toolbarButton" type="button" tabindex="0">
+                  <span>Zoom In</span>
+                </button>
+              </div>
+              <span id="scaleSelectContainer" class="dropdownToolbarButton">
+                <select id="scaleSelect" tabindex="0">
+                  <option id="pageAutoOption" value="auto" selected="selected">Automatic Zoom</option>
+                  <option id="pageActualOption" value="page-actual">Actual Size</option>
+                  <option id="pageFitOption" value="page-fit">Page Fit</option>
+                  <option id="pageWidthOption" value="page-width">Page Width</option>
+                  <option value="0.5">50%</option>
+                  <option value="0.75">75%</option>
+                  <option value="1">100%</option>
+                  <option value="1.25">125%</option>
+                  <option value="1.5">150%</option>
+                  <option value="2">200%</option>
+                  <option value="3">300%</option>
+                  <option value="4">400%</option>
+                </select>
+              </span>
+            </div>
+            <div id="toolbarViewerRight" class="toolbarHorizontalGroup">
+              <div id="editorModeButtons" class="toolbarHorizontalGroup" role="radiogroup">
+                <div id="editorHighlight" class="toolbarButtonWithContainer">
+                  <button id="editorHighlightButton" class="toolbarButton" type="button" disabled="disabled" role="radio" aria-expanded="false" aria-haspopup="true" aria-controls="editorHighlightParamsToolbar" tabindex="0">
+                    <span>Highlight</span>
+                  </button>
+                </div>
+                <div id="editorFreeText" class="toolbarButtonWithContainer">
+                  <button id="editorFreeTextButton" class="toolbarButton" type="button" disabled="disabled" role="radio" aria-expanded="false" aria-haspopup="true" aria-controls="editorFreeTextParamsToolbar" tabindex="0">
+                    <span>Text</span>
+                  </button>
+                </div>
+                <div id="editorInk" class="toolbarButtonWithContainer">
+                  <button id="editorInkButton" class="toolbarButton" type="button" disabled="disabled" role="radio" aria-expanded="false" aria-haspopup="true" aria-controls="editorInkParamsToolbar" tabindex="0">
+                    <span>Draw</span>
+                  </button>
+                </div>
+                <div id="editorStamp" class="toolbarButtonWithContainer">
+                  <button id="editorStampButton" class="toolbarButton" type="button" disabled="disabled" role="radio" aria-expanded="false" aria-haspopup="true" aria-controls="editorStampParamsToolbar" tabindex="0">
+                    <span>Image</span>
+                  </button>
+                </div>
+              </div>
+              <div id="editorModeSeparator" class="verticalToolbarSeparator"></div>
+              <div class="toolbarHorizontalGroup hiddenMediumView">
+                <button id="print" class="toolbarButton" type="button" tabindex="0">
+                  <span>Print</span>
+                </button>
+                <button id="download" class="toolbarButton" type="button" tabindex="0">
+                  <span>Download</span>
+                </button>
+              </div>
+              <div class="verticalToolbarSeparator hiddenMediumView"></div>
+              <div id="secondaryToolbarToggle" class="toolbarButtonWithContainer">
+                <button id="secondaryToolbarToggle" class="toolbarButton" type="button" tabindex="0" aria-expanded="false" aria-haspopup="true" aria-controls="secondaryToolbar">
+                  <span>Tools</span>
+                </button>
+                <div id="secondaryToolbar" class="hidden doorHangerRight menu">
+                  <div id="secondaryToolbarButtonContainer" class="menuContainer">
+                    <button id="secondaryOpenFile" class="toolbarButton labeled" type="button" tabindex="0" hidden="true">
+                      <span>Open File</span>
+                    </button>
+                    <button id="secondaryPrint" class="toolbarButton labeled" type="button" tabindex="0">
+                      <span>Print</span>
+                    </button>
+                    <button id="secondaryDownload" class="toolbarButton labeled" type="button" tabindex="0">
+                      <span>Download</span>
+                    </button>
+                    <div class="horizontalToolbarSeparator"></div>
+                    <button id="presentationMode" class="toolbarButton labeled" type="button" tabindex="0">
+                      <span>Presentation Mode</span>
+                    </button>
+                    <a href="#" id="viewBookmark" class="toolbarButton labeled" tabindex="0">
+                      <span>Bookmark</span>
+                    </a>
+                    <div id="viewBookmarkSeparator" class="horizontalToolbarSeparator"></div>
+                    <button id="firstPage" class="toolbarButton labeled" type="button" tabindex="0">
+                      <span>First Page</span>
+                    </button>
+                    <button id="lastPage" class="toolbarButton labeled" type="button" tabindex="0">
+                      <span>Last Page</span>
+                    </button>
+                    <div class="horizontalToolbarSeparator"></div>
+                    <button id="pageRotateCw" class="toolbarButton labeled" type="button" tabindex="0">
+                      <span>Rotate Clockwise</span>
+                    </button>
+                    <button id="pageRotateCcw" class="toolbarButton labeled" type="button" tabindex="0">
+                      <span>Rotate Counterclockwise</span>
+                    </button>
+                    <div class="horizontalToolbarSeparator"></div>
+                    <div id="cursorToolButtons" role="radiogroup">
+                      <button id="cursorSelectTool" class="toolbarButton labeled toggled" type="button" tabindex="0" role="radio" aria-checked="true">
+                        <span>Text Selection Tool</span>
+                      </button>
+                      <button id="cursorHandTool" class="toolbarButton labeled" type="button" tabindex="0" role="radio" aria-checked="false">
+                        <span>Hand Tool</span>
+                      </button>
+                    </div>
+                    <div class="horizontalToolbarSeparator"></div>
+                    <div id="scrollModeButtons" role="radiogroup">
+                      <button id="scrollPage" class="toolbarButton labeled" type="button" tabindex="0" role="radio" aria-checked="false">
+                        <span>Page Layout</span>
+                      </button>
+                      <button id="scrollVertical" class="toolbarButton labeled toggled" type="button" tabindex="0" role="radio" aria-checked="true">
+                        <span>Vertical Scrolling</span>
+                      </button>
+                      <button id="scrollHorizontal" class="toolbarButton labeled" type="button" tabindex="0" role="radio" aria-checked="false">
+                        <span>Horizontal Scrolling</span>
+                      </button>
+                      <button id="scrollWrapped" class="toolbarButton labeled" type="button" tabindex="0" role="radio" aria-checked="false">
+                        <span>Wrapped Scrolling</span>
+                      </button>
+                    </div>
+                    <div class="horizontalToolbarSeparator"></div>
+                    <div id="spreadModeButtons" role="radiogroup">
+                      <button id="spreadNone" class="toolbarButton labeled toggled" type="button" tabindex="0" role="radio" aria-checked="true">
+                        <span>No Spreads</span>
+                      </button>
+                      <button id="spreadOdd" class="toolbarButton labeled" type="button" tabindex="0" role="radio" aria-checked="false">
+                        <span>Odd Spreads</span>
+                      </button>
+                      <button id="spreadEven" class="toolbarButton labeled" type="button" tabindex="0" role="radio" aria-checked="false">
+                        <span>Even Spreads</span>
+                      </button>
+                    </div>
+                    <div class="horizontalToolbarSeparator"></div>
+                    <button id="documentProperties" class="toolbarButton labeled" type="button" tabindex="0">
+                      <span>Document Properties</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="loadingBar">
+            <div class="progress"><div class="glimmer"></div></div>
+          </div>
+        </div>
+      </div>
+      <div id="viewerContainer" tabindex="0">
+        <div id="viewer" class="pdfViewer"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="dialogContainer">
+    <dialog id="passwordDialog">
+      <div class="row">
+        <label for="password" id="passwordText">Enter the password to open this PDF file:</label>
+      </div>
+      <div class="row">
+        <input type="password" id="password" class="toolbarField">
+      </div>
+      <div class="buttonRow">
+        <button id="passwordCancel" class="dialogButton" type="button"><span>Cancel</span></button>
+        <button id="passwordSubmit" class="dialogButton" type="button"><span>OK</span></button>
+      </div>
+    </dialog>
+    <dialog id="documentPropertiesDialog">
+      <div class="row"><span id="fileNameLabel">File Name:</span><p id="fileNameField">-</p></div>
+      <div class="row"><span id="fileSizeLabel">File Size:</span><p id="fileSizeField">-</p></div>
+      <div class="separator"></div>
+      <div class="row"><span id="titleLabel">Title:</span><p id="titleField">-</p></div>
+      <div class="row"><span id="authorLabel">Author:</span><p id="authorField">-</p></div>
+      <div class="row"><span id="subjectLabel">Subject:</span><p id="subjectField">-</p></div>
+      <div class="row"><span id="keywordsLabel">Keywords:</span><p id="keywordsField">-</p></div>
+      <div class="row"><span id="creationDateLabel">Creation Date:</span><p id="creationDateField">-</p></div>
+      <div class="row"><span id="modificationDateLabel">Modification Date:</span><p id="modificationDateField">-</p></div>
+      <div class="row"><span id="creatorLabel">Creator:</span><p id="creatorField">-</p></div>
+      <div class="separator"></div>
+      <div class="row"><span id="producerLabel">Producer:</span><p id="producerField">-</p></div>
+      <div class="row"><span id="versionLabel">Version:</span><p id="versionField">-</p></div>
+      <div class="row"><span id="pageCountLabel">Page Count:</span><p id="pageCountField">-</p></div>
+      <div class="row"><span id="pageSizeLabel">Page Size:</span><p id="pageSizeField">-</p></div>
+      <div class="separator"></div>
+      <div class="row"><span id="linearizedLabel">Fast Web View:</span><p id="linearizedField">-</p></div>
+      <div class="buttonRow">
+        <button id="documentPropertiesClose" class="dialogButton" type="button"><span>Close</span></button>
+      </div>
+    </dialog>
+  </div>
+
+  <div id="printContainer"></div>
+
+  <script src="pdf_viewer.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '../build/pdf.worker.min.js';
+
+    var APP_ID = 'viewer';
+    var LOADING_EVENTS = ['load', 'webviewerloaded'];
+
+    var pdfViewer = null;
+    var eventBus = null;
+    var pdfDocument = null;
+
+    function init() {
+      var container = document.getElementById('viewerContainer');
+      var viewer = document.getElementById('viewer');
+
+      eventBus = new pdfjsViewer.EventBus();
+
+      pdfViewer = new pdfjsViewer.PDFViewer({
+        container: container,
+        eventBus: eventBus,
+        id: APP_ID,
+        renderer: 'canvas',
+        textLayerMode: 1,
+        annotationEditorMode: 0,
+        enableWebGL: false,
+        l10n: pdfjsNullL10n,
+        maxCanvasPixels: 16777216,
+      });
+
+      pdfViewer.spreadMode = 0;
+      pdfViewer.scrollMode = 0;
+
+      var urlParams = new URLSearchParams(window.location.search);
+      var file = urlParams.get('file');
+      if (file) {
+        loadDocument(decodeURIComponent(file));
+      }
+
+      document.getElementById('pageNumber').addEventListener('change', function() {
+        var num = parseInt(this.value, 10);
+        if (pdfViewer && num >= 1 && num <= pdfViewer.pagesCount) {
+          pdfViewer.currentPageNumber = num;
+        }
+      });
+
+      document.getElementById('previous').addEventListener('click', function() {
+        if (pdfViewer) pdfViewer.currentPageNumber--;
+      });
+      document.getElementById('next').addEventListener('click', function() {
+        if (pdfViewer) pdfViewer.currentPageNumber++;
+      });
+      document.getElementById('zoomIn').addEventListener('click', function() {
+        if (pdfViewer) pdfViewer.currentScaleValue = pdfViewer.currentScaleValue * 1.1;
+      });
+      document.getElementById('zoomOut').addEventListener('click', function() {
+        if (pdfViewer) pdfViewer.currentScaleValue = pdfViewer.currentScaleValue / 1.1;
+      });
+      document.getElementById('scaleSelect').addEventListener('change', function() {
+        if (!pdfViewer) return;
+        var val = this.value;
+        if (val === 'auto') pdfViewer.currentScaleValue = 'auto';
+        else if (val === 'page-actual') pdfViewer.currentScaleValue = 1;
+        else if (val === 'page-fit') pdfViewer.currentScaleValue = 'page-fit';
+        else if (val === 'page-width') pdfViewer.currentScaleValue = 'page-width';
+        else pdfViewer.currentScaleValue = parseFloat(val);
+      });
+      document.getElementById('print').addEventListener('click', function() {
+        if (!pdfDocument) return;
+        pdfDocument.getData().then(function() {
+          window.print();
+        });
+      });
+      document.getElementById('download').addEventListener('click', function() {
+        if (!pdfDocument) return;
+        var urlParams = new URLSearchParams(window.location.search);
+        var file = urlParams.get('file');
+        if (file) {
+          var a = document.createElement('a');
+          a.href = decodeURIComponent(file);
+          a.download = '';
+          a.click();
+        }
+      });
+      document.getElementById('sidebarToggle').addEventListener('click', function() {
+        var sidebar = document.getElementById('sidebarContainer');
+        var outer = document.getElementById('outerContainer');
+        sidebar.classList.toggle('hidden');
+        outer.classList.toggle('sidebarOpen');
+      });
+      document.getElementById('viewThumbnail').addEventListener('click', function() {
+        document.getElementById('thumbnailView').classList.remove('hidden');
+        document.getElementById('outlineView').classList.add('hidden');
+        document.getElementById('attachmentsView').classList.add('hidden');
+      });
+
+      eventBus.on('pagechanging', function(evt) {
+        document.getElementById('pageNumber').value = evt.pageNumber;
+      });
+      eventBus.on('scalechanging', function(evt) {
+        var select = document.getElementById('scaleSelect');
+        var val = evt.scale;
+        var found = false;
+        for (var i = 0; i < select.options.length; i++) {
+          if (parseFloat(select.options[i].value) === val) {
+            select.selectedIndex = i;
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          select.value = 'auto';
+        }
+      });
+    }
+
+    function loadDocument(url) {
+      var loadingTask = pdfjsLib.getDocument(url);
+      loadingTask.promise.then(function(pdfDoc_) {
+        pdfDocument = pdfDoc_;
+        pdfViewer.setDocument(pdfDocument);
+        document.getElementById('numPages').textContent = pdfDoc_.numPages;
+        document.getElementById('pageNumber').max = pdfDoc_.numPages;
+      }, function(error) {
+        console.error('Error loading PDF:', error);
+      });
+    }
+
+    var pdfjsNullL10n = {
+      get: function(id, args, fallback) { return Promise.resolve(fallback || id); },
+      getDirection: function() { return Promise.resolve('ltr'); },
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  </script>
+</body>
+</html>

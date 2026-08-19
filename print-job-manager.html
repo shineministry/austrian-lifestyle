@@ -377,7 +377,7 @@
     var job = jobs.find(function(j){ return j.id === jobId; });
     var modal = document.getElementById('pdfModal');
     var frame = document.getElementById('pdfFrame');
-    var viewerUrl = 'https://mozilla.github.io/pdf.js/web/viewer.html?file=' + encodeURIComponent(API_BASE + '/pdf/' + jobId);
+    var viewerUrl = 'pdfjs/web/viewer.html?file=' + encodeURIComponent(API_BASE + '/pdf/' + jobId);
     frame.src = viewerUrl;
     modal.classList.add('open');
     document.body.style.overflow = 'hidden';
