@@ -517,11 +517,20 @@
     document.getElementById('pdfModalLoading').className = 'pdf-modal-loading';
   };
 
-  window.printPdf = function(){
+  window.printPdf = async function(){
     if(!currentPdfJobId){ showToast('No PDF loaded.'); return; }
-    const printWin = window.open(API_BASE + '/pdf/' + currentPdfJobId, '_blank');
-    if(!printWin){ showToast('Pop-up blocked. Please allow pop-ups.'); return; }
-    printWin.focus();
+    try{
+      const res = await fetch(API_BASE + '/pdf/' + currentPdfJobId);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const w = window.open('');
+      w.document.write('<html><head><title>Print</title></head><body style="margin:0"><iframe id="f" src="' + url + '" style="width:100%;height:100vh;border:none"></iframe></body></html>');
+      w.document.close();
+      document.getElementById('pdfModal').classList.remove('open');
+      document.body.style.overflow = '';
+      const f = w.document.getElementById('f');
+      f.onload = function(){ setTimeout(function(){ w.print(); }, 300); };
+    }catch(e){ showToast('Could not load PDF for printing.'); }
   };
 
   // Close on Escape
