@@ -225,7 +225,7 @@
     padding: 18px 10px 40px; -webkit-overflow-scrolling: touch; touch-action: pan-y pinch-zoom;
     background: repeating-linear-gradient(45deg, #cabb92, #cabb92 10px, #c3b389 10px, #c3b389 20px);
   }
-  #printModalBodyWrap{padding:0;overflow:auto;display:flex;flex-direction:column;align-items:stretch;}
+  #printModalBodyWrap{padding:0 !important;overflow:auto;display:flex;flex-direction:column;align-items:stretch;background:none !important;}
   #printModalBodyWrap img{display:block;width:100%;flex-shrink:0;}
 
   .pdf-modal-body canvas{
@@ -253,14 +253,15 @@
   footer{ text-align:center; margin-top: 34px; font-size: 11px; opacity: 0.5; letter-spacing: 0.06em; }
 
   @media print{
-    *{ visibility: hidden !important; margin: 0 !important; padding: 0 !important; }
-    #printModal, #printModal *{ visibility: visible !important; }
-    #printModal{ position: absolute; top: 0; left: 0; width: 100%; background: none; border: none; }
-    #printModal .pdf-modal-header, #printModal .pdf-modal-backdrop{ display: none !important; }
-    #printModal .pdf-modal-content{ position: static; box-shadow: none; border: none; background: none; padding: 0; }
-    #printModal .pdf-modal-body{ overflow: visible; padding: 0; background: none; display: block; }
-    #printModalBodyWrap{ overflow: visible; display: block; }
-    #printModalBodyWrap img{ page-break-after: avoid; page-break-inside: avoid; }
+    html,body{ margin:0 !important; padding:0 !important; height:auto !important; overflow:visible !important; }
+    .wrap, header, .perforation, #offlineBanner, .ticket, .section-label, .filter-tabs, .toolbar, #jobList, #totals, footer, .toast, #pdfModal{ display:none !important; }
+    #printModal{ position:fixed !important; top:0 !important; left:0 !important; width:100% !important; height:auto !important; background:none !important; border:none !important; box-shadow:none !important; z-index:auto !important; }
+    #printModal .pdf-modal-backdrop, #printModal .pdf-modal-header{ display:none !important; }
+    #printModal .pdf-modal-content{ position:static !important; box-shadow:none !important; border:none !important; background:none !important; inset:auto !important; }
+    #printModal .pdf-modal-body{ padding:0 !important; margin:0 !important; overflow:visible !important; background:none !important; display:block !important; }
+    #printModalBodyWrap{ padding:0 !important; margin:0 !important; overflow:visible !important; display:block !important; }
+    #printModalBodyWrap img{ display:block !important; width:100% !important; page-break-after:always; page-break-inside:avoid; margin:0 !important; padding:0 !important; }
+    #printModalBodyWrap img:last-child{ page-break-after:auto; }
   }
 
   @media (max-width: 520px){
