@@ -551,7 +551,7 @@
       var images = [];
       for(var i = 1; i <= pdf.numPages; i++){
         var page = await pdf.getPage(i);
-        var vp = page.getViewport({ scale: 2 });
+        var vp = page.getViewport({ scale: 1.5 });
         var c = document.createElement('canvas');
         c.width = vp.width; c.height = vp.height;
         await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
@@ -563,8 +563,10 @@
       }
       pdf.destroy();
       var html = '<!DOCTYPE html><html><head><title>Print</title><style>';
-      html += '@page{margin:0;size:portrait;}body{margin:0;padding:0;}';
-      html += 'img{display:block;width:100%;height:auto;}';
+      html += '@page{margin:0;size:portrait;}';
+      html += 'body{margin:0;padding:0;}';
+      html += 'img{display:block;width:100%;max-height:100vh;object-fit:contain;page-break-after:always;page-break-inside:avoid;}';
+      html += 'img:last-child{page-break-after:auto;}';
       html += '</style></head><body>';
       for(var j = 0; j < images.length; j++){
         html += '<img src="' + images[j] + '">';
