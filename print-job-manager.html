@@ -528,24 +528,23 @@
       if(!res.ok) throw new Error('fetch failed');
       const buf = await res.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
-      var w = window.open('');
-      w.document.write('<html><head><title>Print</title><style>@page{margin:0;}body{margin:0;padding:0;}img{display:block;width:100%;}@media print{img{page-break-after:always;width:100%;}img:last-child{page-break-after:auto;}}</style></head><body></body></html>');
-      w.document.close();
+      var imgs = '';
       for(var i = 1; i <= pdf.numPages; i++){
         var page = await pdf.getPage(i);
-        var vp = page.getViewport({ scale: 3 });
+        var vp = page.getViewport({ scale: 2 });
         var c = document.createElement('canvas');
         c.width = vp.width; c.height = vp.height;
         await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
         page.cleanup();
-        var img = w.document.createElement('img');
-        img.src = c.toDataURL('image/png');
-        w.document.body.appendChild(img);
+        imgs += '<img src="' + c.toDataURL('image/jpeg', 0.95) + '" style="display:block;width:100%;">';
         c.width = 0; c.height = 0; c = null;
-        await new Promise(function(r){ setTimeout(r, 20); });
+        await new Promise(function(r){ setTimeout(r, 10); });
       }
       pdf.destroy();
-      setTimeout(function(){ w.print(); }, 600);
+      var w = window.open('', '_blank');
+      w.document.write('<!DOCTYPE html><html><head><title>Print</title><style>*{margin:0;padding:0;}@page{margin:0.4in;}img{display:block;width:100%;}</style></head><body>' + imgs + '</body></html>');
+      w.document.close();
+      w.onload = function(){ setTimeout(function(){ w.focus(); w.print(); }, 300); };
     }catch(e){ showToast('Could not load PDF for printing.'); }
   };
 
