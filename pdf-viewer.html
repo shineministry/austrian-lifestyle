@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PDF Viewer</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf_viewer.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
   *{ margin:0; padding:0; box-sizing:border-box; }
@@ -26,7 +25,6 @@
   .toolbarBtn:disabled:hover{ background:transparent; }
   .toolbarSeparator{ width:1px; height:20px; background:#555; margin:0 4px; flex-shrink:0; }
 
-  /* Page number */
   #pageNumber{
     width:46px; height:24px; text-align:center; font-size:13px;
     background:#4a4d51; border:1px solid #666; color:#fff; border-radius:3px;
@@ -34,7 +32,6 @@
   }
   #numPages{ color:#aaa; font-size:12px; margin-left:2px; flex-shrink:0; }
 
-  /* Zoom */
   #scaleSelect{
     height:24px; background:#4a4d51; border:1px solid #666; color:#fff;
     font-size:12px; border-radius:3px; padding:0 4px; flex-shrink:0;
@@ -75,8 +72,36 @@
   }
   .page:last-child{ margin-bottom:0; }
 
-  /* SVG icons */
   .icon{ width:16px; height:16px; fill:currentColor; }
+
+  /* ---- Print container (hidden on screen) ---- */
+  #printContainer{ display:none; }
+
+  /* ---- Loading overlay ---- */
+  #printOverlay{
+    display:none; position:fixed; inset:0; z-index:999;
+    background:rgba(0,0,0,0.6); align-items:center; justify-content:center;
+  }
+  #printOverlay.active{ display:flex; }
+  #printOverlay .msg{
+    background:#323639; color:#fff; padding:20px 30px; border-radius:6px;
+    font-size:14px; text-align:center;
+  }
+
+  /* ---- Print styles ---- */
+  @media print{
+    html, body{ height:auto !important; overflow:visible !important; background:#fff !important; }
+    #toolbarContainer, #sidebar, #viewerContainer, #printOverlay{ display:none !important; }
+    #printContainer{ display:block !important; }
+    #printContainer .printPage{
+      width:100%; margin:0; padding:0; page-break-after:always; page-break-inside:avoid;
+      display:flex; align-items:flex-start; justify-content:center;
+    }
+    #printContainer .printPage:last-child{ page-break-after:auto; }
+    #printContainer .printPage canvas{
+      display:block; max-width:100%; height:auto;
+    }
+  }
 </style>
 </head>
 <body>
@@ -129,11 +154,18 @@
   <div id="viewer"></div>
 </div>
 
+<div id="printContainer"></div>
+
+<div id="printOverlay">
+  <div class="msg">Preparing print&hellip;</div>
+</div>
+
 <script>
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
   var pdfDoc = null, currentPage = 1, currentScale = 1.5;
   var sidebarOpen = false;
+  var printScale = 150 / 72;
 
   var params = new URLSearchParams(window.location.search);
   var fileUrl = params.get('file');
@@ -147,8 +179,8 @@
       renderAll();
       buildSidebar();
     }).catch(function(err){
-      var viewer = document.getElementById('viewer');
-      viewer.innerHTML = '<p style="color:#fff;text-align:center;padding:60px 20px;">Could not load PDF.</p>';
+      document.getElementById('viewer').innerHTML =
+        '<p style="color:#fff;text-align:center;padding:60px 20px;">Could not load PDF.</p>';
     });
   }
 
@@ -205,8 +237,7 @@
   }
 
   function updateThumbActive(num){
-    var thumbs = document.querySelectorAll('.thumb');
-    thumbs.forEach(function(t,i){
+    document.querySelectorAll('.thumb').forEach(function(t,i){
       t.classList.toggle('active', i === num - 1);
     });
   }
@@ -217,8 +248,7 @@
     var pages = document.querySelectorAll('.page');
     var mid = container.scrollTop + container.clientHeight / 2;
     for(var i = 0; i < pages.length; i++){
-      var el = pages[i];
-      if(el.offsetTop + el.offsetHeight >= mid){
+      if(pages[i].offsetTop + pages[i].offsetHeight >= mid){
         currentPage = i + 1;
         break;
       }
@@ -276,7 +306,43 @@
     document.getElementById('viewerContainer').classList.toggle('sidebarOpen', sidebarOpen);
   });
 
-  document.getElementById('printBtn').addEventListener('click', function(){ window.print(); });
+  /* ---- Proper pdf.js-style print ---- */
+  document.getElementById('printBtn').addEventListener('click', doPrint);
+
+  function doPrint(){
+    if(!pdfDoc) return;
+    var overlay = document.getElementById('printOverlay');
+    var container = document.getElementById('printContainer');
+    overlay.classList.add('active');
+    container.innerHTML = '';
+
+    var ops = [];
+    for(var i = 1; i <= pdfDoc.numPages; i++){
+      (function(pageNum){
+        ops.push(pdfDoc.getPage(pageNum).then(function(page){
+          var vp = page.getViewport({ scale: printScale });
+          var c = document.createElement('canvas');
+          c.width = vp.width;
+          c.height = vp.height;
+          var ctx = c.getContext('2d');
+          return page.render({ canvasContext: ctx, viewport: vp }).promise.then(function(){
+            var div = document.createElement('div');
+            div.className = 'printPage';
+            div.appendChild(c);
+            container.appendChild(div);
+          });
+        }));
+      })(i);
+    }
+
+    Promise.all(ops).then(function(){
+      overlay.classList.remove('active');
+      setTimeout(function(){ window.print(); }, 200);
+    }).catch(function(){
+      overlay.classList.remove('active');
+    });
+  }
+
   document.getElementById('closeBtn').addEventListener('click', function(){
     if(window.parent && window.parent !== window) window.parent.closePdfModal();
   });
