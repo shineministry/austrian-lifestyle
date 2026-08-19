@@ -1,4 +1,4 @@
-const CACHE_NAME = 'austrian-lifestyle-v2';
+const CACHE_NAME = 'austrian-lifestyle-v3';
 const LOCAL_FILES = [
   'index.html',
   'student-dashboard.html',
@@ -6,6 +6,7 @@ const LOCAL_FILES = [
   'boarding-school-manager.html',
   'expense-tracker.html',
   'friends-contacts.html',
+  'print-job-manager.html',
   'manifest.json',
   'sw.js',
   'auth-sync.js'
