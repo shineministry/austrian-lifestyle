@@ -357,8 +357,7 @@
   <div class="pdf-modal-backdrop" onclick="closePrintModal()"></div>
   <div class="pdf-modal-content" style="display:flex;align-items:center;justify-content:center;height:100vh;background:rgba(0,0,0,0.85);border-radius:0;">
     <div style="text-align:center;">
-      <div id="printStatus" style="color:rgba(255,255,255,0.7);font-size:14px;margin-bottom:20px;"></div>
-      <button type="button" id="printDocBtn" onclick="doPrint()" style="padding:24px 48px;font-size:18px;font-weight:bold;border:none;border-radius:8px;background:var(--stamp-green);color:#fff;cursor:pointer;">Print Document</button>
+      <div id="printStatus" style="color:rgba(255,255,255,0.7);font-size:14px;"></div>
     </div>
   </div>
 </div>
@@ -538,8 +537,6 @@
       document.getElementById('pdfModal').classList.remove('open');
       document.body.style.overflow = '';
       var status = document.getElementById('printStatus');
-      var btn = document.getElementById('printDocBtn');
-      btn.style.display = 'none';
       status.textContent = 'Preparing print...';
       document.getElementById('printModal').classList.add('open');
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -579,17 +576,11 @@
       doc.write(html);
       doc.close();
       status.textContent = '';
-      btn.style.display = '';
+      printIframe.contentWindow.focus();
+      printIframe.contentWindow.print();
     }catch(e){
       status.textContent = 'Could not load PDF.';
-      btn.style.display = 'none';
     }
-  };
-
-  window.doPrint = function(){
-    if(!printIframe) return;
-    printIframe.contentWindow.focus();
-    printIframe.contentWindow.print();
   };
 
   window.closePrintModal = function(){
@@ -597,7 +588,6 @@
     document.body.style.overflow = '';
     if(printIframe){ try{ printIframe.remove(); }catch(e){} printIframe = null; }
     document.getElementById('printStatus').textContent = '';
-    document.getElementById('printDocBtn').style.display = '';
   };
 
   // Close on Escape
