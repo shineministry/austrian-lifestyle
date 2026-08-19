@@ -253,6 +253,15 @@
 
   footer{ text-align:center; margin-top: 34px; font-size: 11px; opacity: 0.5; letter-spacing: 0.06em; }
 
+  @media print{
+    *{ visibility:hidden !important; }
+    #printArea, #printArea *{ visibility:visible !important; }
+    #printArea{ display:block !important; position:fixed; top:0; left:0; width:100%; }
+    #printArea .print-page{ page-break-after:always; page-break-inside:avoid; overflow:hidden; }
+    #printArea .print-page:last-child{ page-break-after:auto; }
+    #printArea img{ display:block; width:100%; height:100%; }
+  }
+
   @media (max-width: 520px){
     .form-row.split{ flex-direction: column; }
     .job-top{ flex-direction: column; }
@@ -354,13 +363,20 @@
   </div>
 </div>
 
+<div id="printArea" style="display:none;"></div>
+
 <div class="pdf-modal" id="printModal">
   <div class="pdf-modal-backdrop" onclick="closePrintModal()"></div>
-  <div class="pdf-modal-content" style="display:flex;align-items:center;justify-content:center;height:100vh;background:rgba(0,0,0,0.85);border-radius:0;position:relative;">
-    <button type="button" onclick="closePrintModal()" style="position:absolute;top:12px;right:16px;background:none;border:none;color:#fff;font-size:28px;cursor:pointer;line-height:1;">&times;</button>
-    <div style="text-align:center;">
-      <div id="printStatus" style="color:rgba(255,255,255,0.7);font-size:14px;margin-bottom:20px;"></div>
-      <button type="button" id="printDocBtn" onclick="doPrint()" style="padding:24px 48px;font-size:18px;font-weight:bold;border:none;border-radius:8px;background:var(--stamp-green);color:#fff;cursor:pointer;display:none;">Print Document</button>
+  <div class="pdf-modal-content" style="display:flex;flex-direction:column;height:100vh;background:var(--kraft);position:relative;">
+    <div class="pdf-modal-header">
+      <div class="pdf-modal-title">Print Preview</div>
+      <div class="pdf-modal-controls">
+        <button type="button" onclick="doPrint()" style="background:rgba(246,241,228,0.2);font-weight:bold;">Print</button>
+        <button type="button" class="pdf-modal-close" onclick="closePrintModal()" title="Close">&times;</button>
+      </div>
+    </div>
+    <div id="printModalBody" style="flex:1;overflow:auto;padding:20px;display:flex;flex-direction:column;align-items:center;gap:20px;background:#555;">
+      <div id="printModalLoading" style="color:#fff;padding:60px;font-size:14px;">Loading...</div>
     </div>
   </div>
 </div>
@@ -554,16 +570,50 @@
   };
 
 
-  window.printPdf = function(){
+  window.printPdf = async function(){
     if(!currentPdfJobId){ showToast('No PDF loaded.'); return; }
-    document.getElementById('pdfModal').classList.remove('open');
-    document.body.style.overflow = '';
-    var w = window.open(API_BASE + '/pdf/' + currentPdfJobId, '_blank', 'toolbar=no,menubar=no,location=no,status=no');
-    if(w){
-      w.addEventListener('keydown', function(e){
-        if((e.ctrlKey||e.metaKey)&&(e.key==='s'||e.key==='S'||e.key==='p'||e.key==='P')) e.preventDefault();
-      });
-      w.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+    try{
+      document.getElementById('pdfModal').classList.remove('open');
+      document.body.style.overflow = '';
+      var body = document.getElementById('printModalBody');
+      var loading = document.getElementById('printModalLoading');
+      loading.textContent = 'Loading PDF...';
+      loading.style.display = 'block';
+      body.querySelectorAll('.print-page,.print-canvas').forEach(function(el){ el.remove(); });
+      document.getElementById('printModal').classList.add('open');
+      document.body.style.overflow = 'hidden';
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      var res = await fetch(API_BASE + '/pdf/' + currentPdfJobId);
+      if(!res.ok) throw new Error('fetch failed');
+      var buf = await res.arrayBuffer();
+      var pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+      var area = document.getElementById('printArea');
+      area.innerHTML = '';
+      for(var i = 1; i <= pdf.numPages; i++){
+        var page = await pdf.getPage(i);
+        var vp = page.getViewport({ scale: 1.5 });
+        var c = document.createElement('canvas');
+        c.width = vp.width; c.height = vp.height;
+        c.className = 'print-canvas';
+        c.style.cssText = 'max-width:100%;height:auto;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);';
+        await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+        page.cleanup();
+        body.appendChild(c);
+        var pw = (vp.width * 72 / 96).toFixed(0);
+        var ph = (vp.height * 72 / 96).toFixed(0);
+        var div = document.createElement('div');
+        div.className = 'print-page';
+        div.style.cssText = 'width:'+pw+'pt;height:'+ph+'pt;overflow:hidden;';
+        var img = document.createElement('img');
+        img.src = c.toDataURL('image/jpeg', 0.95);
+        div.appendChild(img);
+        area.appendChild(div);
+        c.width = 0; c.height = 0; c = null;
+      }
+      pdf.destroy();
+      loading.style.display = 'none';
+    }catch(e){
+      loading.textContent = 'Could not load PDF.';
     }
   };
 
@@ -574,6 +624,10 @@
   window.closePrintModal = function(){
     document.getElementById('printModal').classList.remove('open');
     document.body.style.overflow = '';
+    document.getElementById('printArea').innerHTML = '';
+    var body = document.getElementById('printModalBody');
+    body.querySelectorAll('.print-canvas').forEach(function(el){ el.remove(); });
+    document.getElementById('printModalLoading').style.display = 'block';
   };
 
   // Close on Escape
