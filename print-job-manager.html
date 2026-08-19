@@ -552,7 +552,7 @@
       var pageSizes = [];
       for(var i = 1; i <= pdf.numPages; i++){
         var page = await pdf.getPage(i);
-        var vp = page.getViewport({ scale: 1.5 });
+        var vp = page.getViewport({ scale: 2 });
         pageSizes.push({ w: vp.width, h: vp.height });
         var c = document.createElement('canvas');
         c.width = vp.width; c.height = vp.height;
@@ -565,16 +565,13 @@
       pdf.destroy();
       var html = '<!DOCTYPE html><html><head><title>Print</title><style>';
       html += 'body{margin:0;padding:0;}';
-      for(var k = 0; k < images.length; k++){
-        var pw = (pageSizes[k].w * 72 / 96).toFixed(0);
-        var ph = (pageSizes[k].h * 72 / 96).toFixed(0);
-        html += '@page:nth-of-type('+(k+1)+'){size:'+pw+'pt '+ph+'pt;margin:0;}';
-      }
       html += 'img{display:block;width:100%;page-break-after:always;page-break-inside:avoid;}';
       html += 'img:last-child{page-break-after:auto;}';
       html += '</style></head><body>';
       for(var j = 0; j < images.length; j++){
-        html += '<img src="' + images[j] + '">';
+        var pw = (pageSizes[j].w * 72 / 96).toFixed(0);
+        var ph = (pageSizes[j].h * 72 / 96).toFixed(0);
+        html += '<img src="' + images[j] + '" style="width:'+pw+'pt;height:'+ph+'pt;">';
       }
       html += '</body></html>';
       if(printIframe){ try{ printIframe.remove(); }catch(e){} }
