@@ -225,8 +225,8 @@
     padding: 18px 10px 40px; -webkit-overflow-scrolling: touch; touch-action: pan-y pinch-zoom;
     background: repeating-linear-gradient(45deg, #cabb92, #cabb92 10px, #c3b389 10px, #c3b389 20px);
   }
-  #printModalBodyWrap{padding:0 !important;overflow:auto;display:flex;flex-direction:column;align-items:stretch;background:none !important;}
-  #printModalBodyWrap img{display:block;width:100%;flex-shrink:0;}
+  #printModal .pdf-modal-content{ position:relative; inset:0 !important; border-radius:0; overflow:visible; box-shadow:none; }
+  #printModal .pdf-modal-backdrop{ background:rgba(0,0,0,0.92) !important; }
 
   .pdf-modal-body canvas{
     background:#fff; box-shadow: 0 6px 24px rgba(0,0,0,0.35); max-width: 100%; height:auto;
@@ -532,6 +532,7 @@
   };
 
   var printIframe = null;
+  var printHtml = '';
 
   window.printPdf = async function(){
     if(!currentPdfJobId){ showToast('No PDF loaded.'); return; }
@@ -544,10 +545,10 @@
       status.textContent = 'Preparing print...';
       document.getElementById('printModal').classList.add('open');
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-      const res = await fetch(API_BASE + '/pdf/' + currentPdfJobId);
+      var res = await fetch(API_BASE + '/pdf/' + currentPdfJobId);
       if(!res.ok) throw new Error('fetch failed');
-      const buf = await res.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+      var buf = await res.arrayBuffer();
+      var pdf = await pdfjsLib.getDocument({ data: buf }).promise;
       var images = [];
       for(var i = 1; i <= pdf.numPages; i++){
         var page = await pdf.getPage(i);
@@ -562,32 +563,26 @@
         await new Promise(function(r){ setTimeout(r, 10); });
       }
       pdf.destroy();
+      printHtml = '<!DOCTYPE html><html><head><title>Print</title><style>';
+      printHtml += '@page{margin:0;size:portrait;}body{margin:0;padding:0;}';
+      printHtml += 'img{display:block;width:100%;height:auto;}';
+      printHtml += '</style></head><body>';
+      for(var j = 0; j < images.length; j++){
+        printHtml += '<img src="' + images[j] + '">';
+      }
+      printHtml += '</body></html>';
       if(printIframe){ try{ printIframe.remove(); }catch(e){} }
       printIframe = document.createElement('iframe');
       printIframe.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;border:none;opacity:0;pointer-events:none;';
       document.body.appendChild(printIframe);
-      var html = '<!DOCTYPE html><html><head><title>Print</title><style>';
-      html += '@page{ margin:0; size:portrait; }';
-      html += 'body{ margin:0; padding:0; }';
-      html += 'img{ display:block; width:100%; height:auto; }';
-      html += '</style></head><body>';
-      for(var j = 0; j < images.length; j++){
-        html += '<img src="' + images[j] + '">';
-      }
-      html += '</body></html>';
-      printIframe.onload = function(){
-        try{
-          var doc = printIframe.contentDocument || printIframe.contentWindow.document;
-          doc.open();
-          doc.write(html);
-          doc.close();
-          status.textContent = '';
-          btn.style.display = '';
-        }catch(e){
-          status.textContent = 'Could not load PDF.';
-        }
-      };
-      printIframe.srcdoc = html;
+      var doc = printIframe.contentDocument || printIframe.contentWindow.document;
+      doc.open();
+      doc.write(printHtml);
+      doc.close();
+      status.textContent = '';
+      btn.style.display = '';
+      printIframe.contentWindow.focus();
+      printIframe.contentWindow.print();
     }catch(e){
       status.textContent = 'Could not load PDF.';
     }
@@ -595,6 +590,10 @@
 
   window.doPrint = function(){
     if(!printIframe) return;
+    var doc = printIframe.contentDocument || printIframe.contentWindow.document;
+    doc.open();
+    doc.write(printHtml);
+    doc.close();
     printIframe.contentWindow.focus();
     printIframe.contentWindow.print();
   };
@@ -603,6 +602,7 @@
     document.getElementById('printModal').classList.remove('open');
     document.body.style.overflow = '';
     if(printIframe){ try{ printIframe.remove(); }catch(e){} printIframe = null; }
+    printHtml = '';
     document.getElementById('printStatus').textContent = '';
     document.getElementById('printDocBtn').style.display = 'none';
   };
