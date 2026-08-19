@@ -591,15 +591,24 @@
     var modal = document.getElementById('printModal');
     var header = modal.querySelector('.pdf-modal-header');
     var backdrop = modal.querySelector('.pdf-modal-backdrop');
+    var content = modal.querySelector('.pdf-modal-content');
+    var body = modal.querySelector('.pdf-modal-body');
+    var wrap = document.getElementById('printModalBodyWrap');
     header.style.display = 'none';
     backdrop.style.display = 'none';
-    modal.style.zIndex = '1';
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:none;z-index:99999;overflow:auto;';
+    content.style.cssText = 'position:static;width:100%;height:auto;background:none;box-shadow:none;border:none;';
+    body.style.cssText = 'padding:0;margin:0;overflow:visible;background:none;display:block;height:auto;';
+    wrap.style.cssText = 'padding:0;margin:0;overflow:visible;display:block;height:auto;';
     setTimeout(function(){
       window.print();
       setTimeout(function(){
         header.style.display = '';
         backdrop.style.display = '';
-        modal.style.zIndex = '';
+        modal.style.cssText = '';
+        content.style.cssText = '';
+        body.style.cssText = '';
+        wrap.style.cssText = '';
       }, 500);
     }, 300);
   };
