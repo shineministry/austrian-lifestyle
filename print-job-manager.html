@@ -532,7 +532,6 @@
   };
 
   var printIframe = null;
-  var printHtml = '';
 
   window.printPdf = async function(){
     if(!currentPdfJobId){ showToast('No PDF loaded.'); return; }
@@ -563,26 +562,27 @@
         await new Promise(function(r){ setTimeout(r, 10); });
       }
       pdf.destroy();
-      printHtml = '<!DOCTYPE html><html><head><title>Print</title><style>';
-      printHtml += '@page{margin:0;size:portrait;}body{margin:0;padding:0;}';
-      printHtml += 'img{display:block;width:100%;height:auto;}';
-      printHtml += '</style></head><body>';
+      var html = '<!DOCTYPE html><html><head><title>Print</title><style>';
+      html += '@page{margin:0;size:portrait;}body{margin:0;padding:0;}';
+      html += 'img{display:block;width:100%;height:auto;}';
+      html += '</style></head><body>';
       for(var j = 0; j < images.length; j++){
-        printHtml += '<img src="' + images[j] + '">';
+        html += '<img src="' + images[j] + '">';
       }
-      printHtml += '</body></html>';
+      html += '</body></html>';
       if(printIframe){ try{ printIframe.remove(); }catch(e){} }
       printIframe = document.createElement('iframe');
       printIframe.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;border:none;opacity:0;pointer-events:none;';
       document.body.appendChild(printIframe);
-      var doc = printIframe.contentDocument || printIframe.contentWindow.document;
-      doc.open();
-      doc.write(printHtml);
-      doc.close();
-      status.textContent = '';
-      btn.style.display = '';
-      printIframe.contentWindow.focus();
-      printIframe.contentWindow.print();
+      printIframe.onload = function(){
+        setTimeout(function(){
+          printIframe.contentWindow.focus();
+          printIframe.contentWindow.print();
+          status.textContent = '';
+          btn.style.display = '';
+        }, 500);
+      };
+      printIframe.srcdoc = html;
     }catch(e){
       status.textContent = 'Could not load PDF.';
     }
@@ -590,10 +590,6 @@
 
   window.doPrint = function(){
     if(!printIframe) return;
-    var doc = printIframe.contentDocument || printIframe.contentWindow.document;
-    doc.open();
-    doc.write(printHtml);
-    doc.close();
     printIframe.contentWindow.focus();
     printIframe.contentWindow.print();
   };
@@ -602,7 +598,6 @@
     document.getElementById('printModal').classList.remove('open');
     document.body.style.overflow = '';
     if(printIframe){ try{ printIframe.remove(); }catch(e){} printIframe = null; }
-    printHtml = '';
     document.getElementById('printStatus').textContent = '';
     document.getElementById('printDocBtn').style.display = 'none';
   };
