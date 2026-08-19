@@ -558,7 +558,13 @@
     if(!currentPdfJobId){ showToast('No PDF loaded.'); return; }
     document.getElementById('pdfModal').classList.remove('open');
     document.body.style.overflow = '';
-    window.open(API_BASE + '/pdf/' + currentPdfJobId, '_blank');
+    var w = window.open(API_BASE + '/pdf/' + currentPdfJobId, '_blank', 'toolbar=no,menubar=no,location=no,status=no');
+    if(w){
+      w.addEventListener('keydown', function(e){
+        if((e.ctrlKey||e.metaKey)&&(e.key==='s'||e.key==='S'||e.key==='p'||e.key==='P')) e.preventDefault();
+      });
+      w.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+    }
   };
 
   window.doPrint = function(){
