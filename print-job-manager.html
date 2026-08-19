@@ -553,7 +553,6 @@
     document.getElementById('pdfModalLoading').className = 'pdf-modal-loading';
   };
 
-  var printIframe = null;
 
   window.printPdf = async function(){
     if(!currentPdfJobId){ showToast('No PDF loaded.'); return; }
@@ -570,61 +569,51 @@
       if(!res.ok) throw new Error('fetch failed');
       var buf = await res.arrayBuffer();
       var pdf = await pdfjsLib.getDocument({ data: buf }).promise;
-      var images = [];
-      var pageSizes = [];
+      var pageDatas = [];
       for(var i = 1; i <= pdf.numPages; i++){
         var page = await pdf.getPage(i);
         var vp = page.getViewport({ scale: 2 });
-        pageSizes.push({ w: vp.width, h: vp.height });
         var c = document.createElement('canvas');
         c.width = vp.width; c.height = vp.height;
         await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
         page.cleanup();
-        images.push(c.toDataURL('image/jpeg', 0.95));
+        pageDatas.push({ img: c.toDataURL('image/jpeg', 0.95), w: vp.width, h: vp.height });
         c.width = 0; c.height = 0; c = null;
         status.textContent = 'Rendering page ' + i + ' of ' + pdf.numPages + '...';
       }
       pdf.destroy();
-      var html = '<!DOCTYPE html><html><head><title>Print</title><style>';
-      html += 'body{margin:0;padding:0;background:#fff;}';
-      html += '.page{page-break-after:always;page-break-inside:avoid;overflow:hidden;background:#fff;}';
-      html += '.page:last-child{page-break-after:auto;}';
-      html += 'img{display:block;width:100%;height:100%;}';
-      html += '</style></head><body>';
-      for(var j = 0; j < images.length; j++){
-        var pw = (pageSizes[j].w * 72 / 96).toFixed(0);
-        var ph = (pageSizes[j].h * 72 / 96).toFixed(0);
-        html += '<div class="page" style="width:'+pw+'pt;height:'+ph+'pt;"><img src="' + images[j] + '"></div>';
+      var win = window.open('', '_blank');
+      if(!win){ status.textContent = ' Popup blocked. Allow popups and try again.'; btn.style.display=''; return; }
+      var doc = win.document;
+      doc.open();
+      doc.write('<!DOCTYPE html><html><head><title>Print</title><style>');
+      doc.write('body{margin:0;padding:0;background:#fff;}');
+      doc.write('.page{overflow:hidden;background:#fff;page-break-after:always;page-break-inside:avoid;}');
+      doc.write('.page:last-child{page-break-after:auto;}');
+      doc.write('img{display:block;width:100%;height:100%;}');
+      doc.write('</style></head><body>');
+      for(var j = 0; j < pageDatas.length; j++){
+        var pw = (pageDatas[j].w * 72 / 96).toFixed(0);
+        var ph = (pageDatas[j].h * 72 / 96).toFixed(0);
+        doc.write('<div class="page" style="width:'+pw+'pt;height:'+ph+'pt;"><img src="'+pageDatas[j].img+'"></div>');
       }
-      html += '</body></html>';
-      if(printIframe){ try{ printIframe.remove(); }catch(e){} }
-      printIframe = document.createElement('iframe');
-      printIframe.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;border:none;opacity:0;pointer-events:none;';
-      document.body.appendChild(printIframe);
-      printIframe.onload = function(){
-        setTimeout(function(){
-          printIframe.contentWindow.focus();
-          printIframe.contentWindow.print();
-          status.textContent = '';
-          btn.style.display = '';
-        }, 150);
-      };
-      printIframe.srcdoc = html;
+      doc.write('</body></html>');
+      doc.close();
+      status.textContent = '';
+      btn.style.display = '';
+      win.onload = function(){ win.print(); };
     }catch(e){
       status.textContent = 'Could not load PDF.';
     }
   };
 
   window.doPrint = function(){
-    if(!printIframe) return;
-    printIframe.contentWindow.focus();
-    printIframe.contentWindow.print();
+    window.print();
   };
 
   window.closePrintModal = function(){
     document.getElementById('printModal').classList.remove('open');
     document.body.style.overflow = '';
-    if(printIframe){ try{ printIframe.remove(); }catch(e){} printIframe = null; }
     document.getElementById('printStatus').textContent = '';
     document.getElementById('printDocBtn').style.display = 'none';
   };
