@@ -185,20 +185,6 @@
   }
   .toast.show{ transform: translateX(-50%) translateY(0); }
 
-  /* ---- PDF viewer modal ---- */
-  .pdf-modal{
-    display:none; position:fixed; inset:0; z-index: 100;
-  }
-  .pdf-modal.open{ display:block; }
-  .pdf-modal-backdrop{
-    position:absolute; inset:0; background: rgba(20,17,13,0.82);
-  }
-  .pdf-modal-content{
-    position:absolute; inset: 3vh 3vw;
-    background: #fff; border-radius: 6px; overflow: hidden;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-  }
-
   .job-id{ cursor:pointer; }
   .job-id:hover{ text-decoration: underline; }
 
@@ -290,12 +276,6 @@
 <div class="toast" id="toast"></div>
 
 
-<div class="pdf-modal" id="pdfModal">
-  <div class="pdf-modal-backdrop" onclick="closePdfModal()"></div>
-  <div class="pdf-modal-content">
-    <iframe id="pdfFrame" style="width:100%;height:100%;border:none;"></iframe>
-  </div>
-</div>
 </div>
 
 <script>
@@ -369,32 +349,14 @@
     }
   }
 
-  // ---- In-page PDF viewer modal (PDF.js) ----
-  let currentPdfJobId = null;
-
+  // ---- PDF opener: normal browser tab/window, native viewer ----
+  // Opens the PDF straight in a new tab. Every modern browser's built-in
+  // PDF viewer (Chrome/Edge/Firefox all use PDF.js under the hood) already
+  // gives print, download, zoom, page nav, etc. — no custom UI needed.
   window.openPdf = function(jobId){
-    currentPdfJobId = jobId;
-    var job = jobs.find(function(j){ return j.id === jobId; });
-    var modal = document.getElementById('pdfModal');
-    var frame = document.getElementById('pdfFrame');
-    var viewerUrl = 'pdfjs/web/viewer.html?file=' + encodeURIComponent(API_BASE + '/pdf/' + jobId);
-    frame.src = viewerUrl;
-    modal.classList.add('open');
-    document.body.style.overflow = 'hidden';
+    var url = API_BASE + '/pdf/' + jobId;
+    window.open(url, '_blank');
   };
-
-  window.closePdfModal = function(){
-    var modal = document.getElementById('pdfModal');
-    var frame = document.getElementById('pdfFrame');
-    modal.classList.remove('open');
-    document.body.style.overflow = '';
-    frame.src = '';
-  };
-
-  // Close on Escape
-  document.addEventListener('keydown', (e) => {
-    if(e.key === 'Escape' && document.getElementById('pdfModal').classList.contains('open')) closePdfModal();
-  });
 
 
   function renderFilterTabs(){
