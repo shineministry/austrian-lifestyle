@@ -180,12 +180,32 @@
   .totals .figure.color .num{ color: #e08a6f; }
   .totals .figure .cap{ font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; opacity: 0.7; }
 
+  .stats-bar{
+    display:flex; gap: 10px; margin: 18px 0; flex-wrap: wrap;
+  }
+  .stat-card{
+    flex: 1 1 100px; background: #fffdf7; border: 1px solid var(--line); border-radius: 4px;
+    padding: 10px 12px; text-align:center; box-shadow: 0 1px 0 var(--shadow);
+  }
+  .stat-card .num{ font-family: Georgia, serif; font-size: 22px; font-weight:700; }
+  .stat-card .cap{ font-size: 9px; text-transform:uppercase; letter-spacing: 0.14em; opacity:0.6; margin-top:2px; }
+  .stat-card.pending .num{ color: var(--stamp-red); }
+  .stat-card.done .num{ color: var(--stamp-green); }
+
+  .toolbar-extra{ display:flex; gap:8px; flex-wrap:wrap; }
+  .toolbar-extra button{
+    background: transparent; border:1px solid var(--line); font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.06em; padding: 7px 10px; color: var(--ink); opacity: 0.75; cursor:pointer; border-radius:3px;
+  }
+  .toolbar-extra button:hover{ opacity:1; background: rgba(43,38,32,0.06); }
+
   .toast{
     position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(120%);
+    opacity: 0; pointer-events: none;
     background: var(--ink); color: var(--paper); padding: 10px 18px; border-radius: 4px;
-    font-size: 13px; transition: transform 0.25s ease; z-index: 10; max-width: 90%; text-align:center;
+    font-size: 13px; transition: transform 0.25s ease, opacity 0.25s ease; z-index: 500; max-width: 90%; text-align:center;
   }
-  .toast.show{ transform: translateX(-50%) translateY(0); }
+  .toast.show{ transform: translateX(-50%) translateY(0); opacity: 1; pointer-events: auto; }
 
   /* ---- PDF viewer modal: a floating "window" with its own title bar,
      like a native app window, so our close button never sits on top of
@@ -260,6 +280,12 @@
 
   <div class="perforation"></div>
 
+  <div class="stats-bar" id="statsBar">
+    <div class="stat-card total"><div class="num" id="statTotal">0</div><div class="cap">Total jobs</div></div>
+    <div class="stat-card pending"><div class="num" id="statPending">0</div><div class="cap">Pending</div></div>
+    <div class="stat-card done"><div class="num" id="statDone">0</div><div class="cap">Done</div></div>
+  </div>
+
   <div id="offlineBanner" style="display:none; background:var(--stamp-red); color:#fff; text-align:center; font-size:12px; letter-spacing:0.08em; text-transform:uppercase; padding:8px 12px; border-radius:3px; margin-bottom:16px;">
     Offline — showing last synced queue. Adding/editing needs a connection.
   </div>
@@ -311,6 +337,11 @@
     </div>
   </div>
 
+  <div class="toolbar-extra">
+    <button type="button" onclick="copyQueueSummary()">Copy summary</button>
+    <button type="button" onclick="loadJobs()">Refresh queue</button>
+  </div>
+
   <div id="jobList"></div>
 
   <div class="totals" id="totals"></div>
@@ -359,12 +390,36 @@
     if(bytes < 1024*1024) return (bytes/1024).toFixed(0) + ' KB';
     return (bytes/(1024*1024)).toFixed(1) + ' MB';
   }
+  let toastTimer = null;
   function showToast(msg){
     const t = document.getElementById('toast');
     t.textContent = msg;
     t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 3200);
+    // Clear any timer from a previous call so overlapping toasts (e.g. two
+    // actions fired close together) can't race each other and leave the
+    // toast permanently stuck visible.
+    if(toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.classList.remove('show'); toastTimer = null; }, 3200);
   }
+  // Builds a plain-text recap of the current filter's queue (name, method,
+  // copy counts) so it can be pasted into WhatsApp/email for the Xerox
+  // counter without anyone needing to look at the screen.
+  function copyQueueSummary(){
+    const visibleJobs = getFilteredJobs();
+    if(visibleJobs.length === 0){ showToast('Nothing to copy in this view.'); return; }
+    const lines = visibleJobs.map(j =>
+      `${ticketNo(j.ticket || 0)} ${j.name} — B/W ${j.bw||0}, Colour ${j.color||0} (${j.method})${j.done ? ' [done]' : ''}`
+    );
+    const text = `${currentFilter} queue — ${visibleJobs.length} job(s)\n` + lines.join('\n');
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text)
+        .then(() => showToast('Queue summary copied.'))
+        .catch(() => showToast('Could not copy — clipboard blocked.'));
+    } else {
+      showToast('Clipboard not available on this browser.');
+    }
+  }
+
   function escapeHtml(str){
     const div = document.createElement('div');
     div.textContent = str;
@@ -563,6 +618,18 @@
           </div>
         `;
       }).join('');
+    }
+
+    // Overall queue stats (across ALL jobs, not just the current filter/search),
+    // so this stays useful even while filtering down to one tab.
+    const statTotal = document.getElementById('statTotal');
+    const statPending = document.getElementById('statPending');
+    const statDone = document.getElementById('statDone');
+    if(statTotal && statPending && statDone){
+      const doneCount = jobs.filter(j => j.done).length;
+      statTotal.textContent = jobs.length;
+      statDone.textContent = doneCount;
+      statPending.textContent = jobs.length - doneCount;
     }
 
     const totalBw = visibleJobs.reduce((s, j) => s + Number(j.bw || 0), 0);
