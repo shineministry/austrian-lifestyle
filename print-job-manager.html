@@ -421,7 +421,21 @@
     titleLabel.textContent = label || jobId;
     modal.classList.add('open');
     document.body.style.overflow = 'hidden';
+    pdfModalOpenJobId = jobId;
+
+    // Instant path: if we already downloaded this PDF's bytes (thumbnail
+    // generation does this for every job in the background), open the
+    // local blob: URL — zero network wait, works even on a bad connection
+    // at the print counter.
+    if(pdfBlobCache.has(jobId)){
+      frame.src = pdfBlobCache.get(jobId);
+      return;
+    }
+    // Not cached yet (rare — e.g. just uploaded this second). Fall back to
+    // a direct network fetch, but also route it through the same cache path
+    // so a re-open is instant.
     frame.src = API_BASE + '/pdf/' + jobId;
+    fetchPdfIntoCache(jobId);
   };
 
 
@@ -432,6 +446,7 @@
     document.body.style.overflow = '';
     frame.onload = null;
     frame.src = '';
+    pdfModalOpenJobId = null;
   };
 
   document.addEventListener('keydown', (e) => {
@@ -567,25 +582,76 @@
   // Renders the first page of each PDF to a small image, cached by job id
   // so it's only generated once per session (not re-fetched every 4s refresh).
   const thumbCache = new Map(); // jobId -> { dataUrl, pageCount }
+  // jobId -> blob: URL holding the PDF's full bytes, so tapping "preview"
+  // never has to wait on the network — it's already local.
+  const pdfBlobCache = new Map();
+  const pdfFetchInFlight = new Map(); // jobId -> Promise, so we never double-fetch
+  let pdfModalOpenJobId = null;
+
+  // Single shared downloader: fetches a job's PDF bytes exactly once,
+  // caches an ArrayBuffer copy (for pdf.js thumbnailing) and a blob: URL
+  // copy (for instant iframe opening). Both renderThumbnails() and the
+  // openPdf() fallback call this, so a PDF is only ever pulled over the
+  // network one time per session.
+  async function fetchPdfIntoCache(jobId){
+    if(pdfBlobCache.has(jobId)) return pdfBlobCache.get(jobId);
+    if(pdfFetchInFlight.has(jobId)) return pdfFetchInFlight.get(jobId);
+    const p = (async () => {
+      try{
+        const res = await fetch(API_BASE + '/pdf/' + jobId);
+        if(!res.ok) return null;
+        const buf = await res.arrayBuffer();
+        const blobUrl = URL.createObjectURL(new Blob([buf], { type: 'application/pdf' }));
+        pdfBlobCache.set(jobId, blobUrl);
+        // If the modal is sitting there waiting on the network fallback,
+        // swap it over to the local blob the instant it's ready.
+        if(pdfModalOpenJobId === jobId){
+          const frame = document.getElementById('pdfFrame');
+          if(frame) frame.src = blobUrl;
+        }
+        return { buf, blobUrl };
+      }catch(e){
+        return null;
+      }finally{
+        pdfFetchInFlight.delete(jobId);
+      }
+    })();
+    pdfFetchInFlight.set(jobId, p);
+    return p;
+  }
+
+  function revokePdfBlob(jobId){
+    if(pdfBlobCache.has(jobId)){
+      try{ URL.revokeObjectURL(pdfBlobCache.get(jobId)); }catch(e){}
+      pdfBlobCache.delete(jobId);
+    }
+  }
 
   async function renderThumbnails(){
+    // Prefetch newly-seen jobs' PDF bytes in the background (low priority,
+    // staggered) so by the time a person taps "preview", it opens instantly.
     for(const job of jobs){
       if(!job.hasFile) continue;
       const iconEl = document.getElementById('thumb-' + job.id);
       const pagesEl = document.getElementById('pages-' + job.id);
-      if(!iconEl) continue;
-
-      if(thumbCache.has(job.id)){
+      if(iconEl && thumbCache.has(job.id)){
         applyThumb(iconEl, pagesEl, thumbCache.get(job.id));
-        continue;
+      } else if(iconEl){
+        generateThumb(job.id).then((result) => {
+          if(!result) return;
+          thumbCache.set(job.id, result);
+          const iconEl2 = document.getElementById('thumb-' + job.id);
+          const pagesEl2 = document.getElementById('pages-' + job.id);
+          if(iconEl2) applyThumb(iconEl2, pagesEl2, result);
+        });
       }
-      generateThumb(job.id).then((result) => {
-        if(!result) return;
-        thumbCache.set(job.id, result);
-        const iconEl2 = document.getElementById('thumb-' + job.id);
-        const pagesEl2 = document.getElementById('pages-' + job.id);
-        if(iconEl2) applyThumb(iconEl2, pagesEl2, result);
-      });
+      if(!pdfBlobCache.has(job.id)) fetchPdfIntoCache(job.id);
+    }
+    // Drop cached bytes for jobs that no longer exist (deleted/duplicated
+    // away) so the blob cache doesn't grow forever across a long session.
+    const liveIds = new Set(jobs.map(j => j.id));
+    for(const id of Array.from(pdfBlobCache.keys())){
+      if(!liveIds.has(id)) revokePdfBlob(id);
     }
   }
 
@@ -607,10 +673,11 @@
     let canvas = null;
     try{
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-      const res = await fetch(API_BASE + '/pdf/' + jobId);
-      if(!res.ok) return null;
-      const buf = await res.arrayBuffer();
-      pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+      // Reuse the shared download (same bytes used for instant preview)
+      // instead of fetching the PDF a second time just for the thumbnail.
+      const cached = await fetchPdfIntoCache(jobId);
+      if(!cached) return null;
+      pdf = await pdfjsLib.getDocument({ data: cached.buf.slice(0) }).promise;
       const page = await pdf.getPage(1);
       const viewport = page.getViewport({ scale: 1 });
       const scale = 160 / viewport.width;
@@ -826,7 +893,7 @@
 
   loadJobs();
   // Fast polling so tick marks / status changes show up on every device almost immediately.
-  setInterval(() => { if(editingId === null) loadJobs(true); }, 2000);
+  setInterval(() => { if(editingId === null && pdfModalOpenJobId === null) loadJobs(true); }, 2000);
 
   // Instant refresh the moment this tab/device regains focus or comes back online.
   document.addEventListener('visibilitychange', () => {
