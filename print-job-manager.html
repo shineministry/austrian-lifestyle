@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Print Job Docket</title>
+<link rel="preconnect" href="https://shark.shinumaths989.workers.dev" crossorigin>
+<link rel="dns-prefetch" href="https://shark.shinumaths989.workers.dev">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%232b2620'/%3E%3Crect x='14' y='10' width='36' height='16' rx='2' fill='%23f6f1e4'/%3E%3Crect x='10' y='24' width='44' height='22' rx='3' fill='%23b3452c'/%3E%3Crect x='18' y='36' width='28' height='18' rx='1' fill='%23f6f1e4'/%3E%3Ccircle cx='46' cy='30' r='2.5' fill='%234a6b53'/%3E%3C/svg%3E">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js" as="worker">
@@ -185,6 +187,49 @@
   }
   .toast.show{ transform: translateX(-50%) translateY(0); }
 
+  /* ---- PDF viewer modal: a floating "window" with its own title bar,
+     like a native app window, so our close button never sits on top of
+     the PDF renderer's own toolbar (download/print/menu icons live inside
+     the iframe and were getting covered before). ---- */
+  .pdf-modal{
+    display:none; position:fixed; inset:0; z-index: 100;
+    align-items:center; justify-content:center;
+    background: rgba(20,17,13,0.72);
+  }
+  .pdf-modal.open{ display:flex; }
+  .pdf-modal-backdrop{
+    position:absolute; inset:0;
+  }
+  .pdf-window{
+    position:relative; z-index:1; display:flex; flex-direction:column;
+    width:88vw; height:88vh; max-width:1100px;
+    background:#fff; border-radius:8px; overflow:hidden;
+    box-shadow: 0 24px 70px rgba(0,0,0,0.55);
+  }
+  .pdf-titlebar{
+    flex: 0 0 auto; height:44px; display:flex; align-items:center;
+    background:#2b2620; color:#f6f1e4; padding-left:14px;
+    font-size:13px; letter-spacing:.02em; user-select:none;
+  }
+  .pdf-titlebar-label{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; opacity:.85; }
+  /* Windows-style close: flush against the top-right corner of the title bar. */
+  .pdf-close-btn{
+    flex: 0 0 auto; width:46px; height:44px; margin:0; border:none; border-radius:0;
+    background:transparent; color:#f6f1e4; font-size:16px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition: background 0.1s ease;
+  }
+  .pdf-close-btn:hover{ background:#e81123; color:#fff; }
+  .pdf-close-btn:active{ background:#c50f1f; }
+  .pdf-modal-content{
+    flex: 1 1 auto; position:relative; overflow:hidden;
+  }
+  @media (max-width: 640px){
+    .pdf-window{ width:96vw; height:92vh; border-radius:6px; }
+    .pdf-titlebar{ height:48px; }
+    .pdf-close-btn{ width:48px; height:48px; font-size:18px; }
+  }
+
   .job-id{ cursor:pointer; }
   .job-id:hover{ text-decoration: underline; }
 
@@ -275,6 +320,18 @@
 
 <div class="toast" id="toast"></div>
 
+<div class="pdf-modal" id="pdfModal">
+  <div class="pdf-modal-backdrop" onclick="closePdfModal()"></div>
+  <div class="pdf-window">
+    <div class="pdf-titlebar">
+      <span class="pdf-titlebar-label" id="pdfTitleLabel">Document</span>
+      <button type="button" class="pdf-close-btn" onclick="closePdfModal()" title="Close">&#10005;</button>
+    </div>
+    <div class="pdf-modal-content">
+      <iframe id="pdfFrame" style="width:100%;height:100%;border:none;"></iframe>
+    </div>
+  </div>
+</div>
 
 </div>
 
@@ -349,14 +406,37 @@
     }
   }
 
-  // ---- PDF opener: normal browser tab/window, native viewer ----
-  // Opens the PDF straight in a new tab. Every modern browser's built-in
-  // PDF viewer (Chrome/Edge/Firefox all use PDF.js under the hood) already
-  // gives print, download, zoom, page nav, etc. — no custom UI needed.
-  window.openPdf = function(jobId){
-    var url = API_BASE + '/pdf/' + jobId;
-    window.open(url, '_blank');
+  // ---- In-page PDF viewer: browser's own native PDF renderer, embedded ----
+  // The iframe loads the PDF directly (not window.open in a new tab), so
+  // it's never treated as a "view/download this file" intent — which is
+  // what was causing Android to hand it off to the Google Drive PDF app.
+  // Staying in-page like this keeps it as a normal embedded viewer using
+  // whatever PDF engine the browser itself ships (Chrome/Edge/Firefox all
+  // use PDF.js internally), with zero extra files to host.
+  window.openPdf = function(jobId, label){
+    const modal = document.getElementById('pdfModal');
+    const frame = document.getElementById('pdfFrame');
+    const titleLabel = document.getElementById('pdfTitleLabel');
+
+    titleLabel.textContent = label || jobId;
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    frame.src = API_BASE + '/pdf/' + jobId;
   };
+
+
+  window.closePdfModal = function(){
+    const modal = document.getElementById('pdfModal');
+    const frame = document.getElementById('pdfFrame');
+    modal.classList.remove('open');
+    document.body.style.overflow = '';
+    frame.onload = null;
+    frame.src = '';
+  };
+
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'Escape' && document.getElementById('pdfModal').classList.contains('open')) closePdfModal();
+  });
 
 
   function renderFilterTabs(){
@@ -435,7 +515,7 @@
           `;
         }
         const docPreview = job.hasFile
-          ? `<a class="doc-bubble" href="javascript:void(0)" onclick="openPdf('${job.id}')">
+          ? `<a class="doc-bubble" href="javascript:void(0)" onclick="openPdf('${job.id}', '${(job.fileName || 'document.pdf').replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')">
                <div class="doc-icon" id="thumb-${job.id}"></div>
                <div class="doc-info">
                  <div class="doc-fname">${escapeHtml(job.fileName || 'document.pdf')}</div>
