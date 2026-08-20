@@ -1,4 +1,4 @@
-const CACHE_NAME = 'austrian-lifestyle-v5';
+const CACHE_NAME = 'austrian-lifestyle-v6';
 const LOCAL_FILES = [
   'index.html',
   'student-dashboard.html',
@@ -7,7 +7,6 @@ const LOCAL_FILES = [
   'expense-tracker.html',
   'friends-contacts.html',
   'print-job-manager.html',
-  'pdf-viewer.html',
   'manifest.json',
   'sw.js',
   'auth-sync.js'
@@ -66,7 +65,7 @@ self.addEventListener('fetch', event => {
   }
 
   /* Print Job Manager / PDF Viewer — network first, never stale */
-  if (url.pathname.includes('print-job-manager') || url.pathname.includes('pdf-viewer')) {
+  if (url.pathname.includes('print-job-manager') || url.pathname.includes('pdfjs/web/viewer')) {
     event.respondWith(
       fetch(event.request).then(response => {
         if (response.ok) {
