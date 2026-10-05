@@ -135,6 +135,35 @@
   .tt-del:hover{opacity:1;color:#e5556a;}
   .add-row{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap;}
   .add-row input{flex:1;min-width:70px;}
+  .tt-actions{display:flex;gap:8px;align-items:center;}
+
+  /* webuntis import */
+  .untis-panel{border-top:1px dashed var(--border);margin:16px 0 10px;padding-top:14px;}
+  .untis-tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
+  .untis-tabs button{
+    padding:6px 12px;font-size:11.5px;background:var(--bg);color:var(--sub);
+    border:1px solid var(--border);
+  }
+  .untis-tabs button.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .untis-form{display:flex;flex-direction:column;gap:9px;}
+  .untis-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .untis-row input[type=url],.untis-row input[type=text]{flex:1;min-width:220px;}
+  .untis-row input[type=file]{font-size:12px;color:var(--sub);max-width:100%;}
+  .untis-check{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--sub);cursor:pointer;}
+  .untis-hint{font-size:11.5px;color:var(--sub);line-height:1.55;}
+  .untis-hint summary{cursor:pointer;font-weight:600;}
+  details.untis-hint{margin-top:6px;}
+  .untis-hint b{color:var(--text);}
+  .untis-status{
+    display:none;font-size:12px;line-height:1.5;padding:9px 12px;border-radius:10px;
+    background:var(--card);border:1px solid var(--border);
+  }
+  .untis-status.ok,.untis-status.err{display:block;}
+  .untis-status.ok{border-color:var(--accent3);color:#1c8a5b;}
+  .untis-status.err{border-color:#e5556a;color:#c23b52;}
+  [data-theme="dark"] .untis-status.ok{color:#6be0a8;}
+  [data-theme="dark"] .untis-status.err{color:#ff8fa3;}
+  .untis-panel[hidden],.untis-form[hidden]{display:none;}
 
   input[type=text],input[type=time],input[type=number],input[type=date],select,textarea{
     background:var(--bg);border:1px solid var(--border);color:var(--text);
@@ -351,8 +380,65 @@
     <!-- Timetable -->
     <div class="card span-7">
       <div class="card-head"><h2>📅 Daily Timetable</h2>
-        <select id="ttDayFilter" onchange="renderTimetable()"></select>
+        <div class="tt-actions">
+          <button class="btn-ghost" style="padding:6px 11px;font-size:12px" onclick="toggleUntis()">🗓️ WebUntis</button>
+          <select id="ttDayFilter" onchange="renderTimetable()"></select>
+        </div>
       </div>
+
+      <!-- WebUntis import -->
+      <div class="untis-panel" id="untisPanel" hidden>
+        <div class="untis-tabs">
+          <button id="uTabFile" class="active" onclick="setUntisTab('file')">📄 Calendar file (.ics)</button>
+          <button id="uTabUrl" onclick="setUntisTab('url')">🔄 Auto-sync link</button>
+        </div>
+
+        <div class="untis-form" id="uPaneFile">
+          <div class="untis-hint">
+            In WebUntis open <b>your name → Calendar export</b>, tick only your timetable,
+            then download the <b>.ics file</b> (or copy the text). Each import replaces the
+            previous WebUntis rows and the starter examples — rows you added by hand are kept.
+          </div>
+          <div class="untis-row">
+            <input type="file" id="untisFile" accept=".ics,.ical,text/calendar">
+            <button class="btn-primary" onclick="importUntisFile()">Import file</button>
+          </div>
+          <textarea id="untisPaste" rows="3" placeholder="…or paste the iCal / .ics content here"></textarea>
+          <div class="untis-row">
+            <button class="btn-primary" onclick="importUntisPaste()">Import pasted iCal</button>
+          </div>
+        </div>
+
+        <div class="untis-form" id="uPaneUrl" hidden>
+          <div class="untis-hint">
+            Paste your <b>calendar subscription link</b> from WebUntis (it starts with
+            <b>…/WebUntis/api/ical?…</b>). Your school rewrites the timetable almost every
+            day, so turn on auto-sync and the dashboard pulls the latest whenever you open it.
+          </div>
+          <div class="untis-row"><input type="url" id="untisUrl" placeholder="https://school.webuntis.com/WebUntis/api/ical?&amp;school=…&amp;token=…" onchange="readUntisCfg()"></div>
+          <label class="untis-check"><input type="checkbox" id="untisAuto" onchange="readUntisCfg()"> Refresh automatically when the dashboard opens</label>
+          <div class="untis-row">
+            <button class="btn-primary" onclick="syncUntis()">Sync now</button>
+            <button class="btn-ghost" onclick="saveUntisCfgOnly()">Save settings</button>
+          </div>
+          <details class="untis-hint">
+            <summary>Link will not load? (CORS proxy)</summary>
+            <div style="margin-top:7px">
+              WebUntis sends no CORS headers, so browsers block this page from fetching your
+              calendar directly. Add a proxy prefix below and your link is appended to it —
+              e.g. <b>https://api.allorigins.win/raw?url=</b> or your own Cloudflare Worker
+              (<b>…workers.dev/?url=</b>). Your calendar token passes through that proxy, so
+              use one you trust. No proxy? Use the <b>Calendar file</b> tab instead.
+            </div>
+            <div class="untis-row" style="margin-top:8px">
+              <input type="text" id="untisProxy" placeholder="CORS proxy prefix (optional)" onchange="readUntisCfg()">
+            </div>
+          </details>
+        </div>
+
+        <div class="untis-status" id="untisStatus"></div>
+      </div>
+
       <table>
         <thead><tr><th>Time</th><th>Subject</th><th>Room</th><th>Day</th><th></th></tr></thead>
         <tbody id="ttBody"></tbody>
@@ -439,11 +525,11 @@ setInterval(updateClock, 1000);
 /* ---------- Timetable ---------- */
 const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 let timetable = store.get('timetable', [
-  {time:'08:00', subject:'Mathematics', room:'201', day:'Mon'},
-  {time:'09:30', subject:'Physics', room:'Lab 2', day:'Mon'},
-  {time:'08:00', subject:'English Literature', room:'105', day:'Tue'},
-  {time:'11:00', subject:'Chemistry', room:'Lab 1', day:'Wed'},
-  {time:'13:00', subject:'History', room:'302', day:'Thu'},
+  {time:'08:00', subject:'Mathematics', room:'201', day:'Mon', src:'demo'},
+  {time:'09:30', subject:'Physics', room:'Lab 2', day:'Mon', src:'demo'},
+  {time:'08:00', subject:'English Literature', room:'105', day:'Tue', src:'demo'},
+  {time:'11:00', subject:'Chemistry', room:'Lab 1', day:'Wed', src:'demo'},
+  {time:'13:00', subject:'History', room:'302', day:'Thu', src:'demo'},
 ]);
 const dayFilter = document.getElementById('ttDayFilter');
 dayFilter.innerHTML = '<option value="all">All days</option>' + DAYS.map(d=>`<option value="${d}">${d}</option>`).join('');
@@ -466,9 +552,13 @@ function renderTimetable(){
   const nowMin = timeToMin(new Date().toTimeString().slice(0,5));
   body.innerHTML = rows.map((c)=>{
     const idx = timetable.indexOf(c);
-    const isNow = c.day===todayShort && Math.abs(timeToMin(c.time)-nowMin) < 60 && timeToMin(c.time) <= nowMin;
+    const start = timeToMin(c.time);
+    const end = c.end ? timeToMin(c.end) : null;
+    const isNow = c.day===todayShort && (end!==null
+      ? nowMin>=start && nowMin<end
+      : Math.abs(start-nowMin) < 60 && start <= nowMin);
     return `<tr class="${isNow?'tt-now':''}">
-      <td>${c.time}</td>
+      <td>${c.time}${c.end? ` <span style="color:var(--sub)">– ${c.end}</span>` : ''}</td>
       <td><span class="dot" style="background:${dayColors[c.day]}"></span>${c.subject}</td>
       <td>${c.room||'-'}</td>
       <td>${c.day}</td>
@@ -491,6 +581,213 @@ function addClass(){
 }
 function deleteClass(i){ timetable.splice(i,1); saveTimetable(); }
 renderTimetable();
+
+/* ---------- WebUntis import ---------- */
+const untisCfg = store.get('untisCfg', {url:'', proxy:'', auto:false, lastSync:0});
+const SYNC_MIN_INTERVAL = 30*60*1000;
+
+function toggleUntis(){
+  const panel = document.getElementById('untisPanel');
+  panel.hidden = !panel.hidden;
+  if(!panel.hidden){
+    document.getElementById('untisUrl').value = untisCfg.url || '';
+    document.getElementById('untisProxy').value = untisCfg.proxy || '';
+    document.getElementById('untisAuto').checked = !!untisCfg.auto;
+  }
+}
+function setUntisTab(tab){
+  const isFile = tab === 'file';
+  document.getElementById('uPaneFile').hidden = !isFile;
+  document.getElementById('uPaneUrl').hidden = isFile;
+  document.getElementById('uTabFile').classList.toggle('active', isFile);
+  document.getElementById('uTabUrl').classList.toggle('active', !isFile);
+}
+function readUntisCfg(){
+  untisCfg.url = document.getElementById('untisUrl').value.trim();
+  untisCfg.proxy = document.getElementById('untisProxy').value.trim();
+  untisCfg.auto = document.getElementById('untisAuto').checked;
+  store.set('untisCfg', untisCfg);
+}
+function saveUntisCfgOnly(){ readUntisCfg(); untisStatus('Settings saved.', 'ok'); }
+function untisStatus(msg, kind){
+  const el = document.getElementById('untisStatus');
+  el.textContent = msg;
+  el.className = 'untis-status' + (kind ? ' ' + kind : '');
+}
+
+/* --- iCalendar parsing --- */
+function icsUnfold(text){
+  return String(text).replace(/\r\n?/g, '\n').replace(/\n[ \t]/g, '');
+}
+function icsUnescape(s){
+  return s.replace(/\\[nN]/g, ' ').replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\\\/g, '\\').trim();
+}
+function icsDateTime(v){
+  const m = /^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z)?)?$/.exec(v.trim());
+  if(!m) return null;
+  let Y = +m[1], M = +m[2], D = +m[3], h = +(m[4] || 0), mi = +(m[5] || 0);
+  if(m[7]){
+    const d = new Date(Date.UTC(Y, M-1, D, h, mi, +(m[6] || 0)));
+    Y = d.getUTCFullYear(); M = d.getUTCMonth()+1; D = d.getUTCDate();
+    h = d.getUTCHours(); mi = d.getUTCMinutes();
+  }
+  return {
+    date: `${Y}-${String(M).padStart(2,'0')}-${String(D).padStart(2,'0')}`,
+    time: `${String(h).padStart(2,'0')}:${String(mi).padStart(2,'0')}`
+  };
+}
+function parseIcsEvents(text){
+  const events = [];
+  let cur = null;
+  icsUnfold(text).split('\n').forEach(function(raw){
+    const line = raw.trim();
+    if(!line) return;
+    if(/^(begin|end):vevent$/i.test(line)){
+      if(/^begin:/i.test(line)) cur = {};
+      else if(cur){ events.push(cur); cur = null; }
+      return;
+    }
+    if(!cur) return;
+    const ci = line.indexOf(':');
+    if(ci < 0) return;
+    const head = line.slice(0, ci), val = line.slice(ci + 1);
+    const key = head.split(';')[0].toUpperCase();
+    if(key === 'DTSTART'){ cur.start = icsDateTime(val); cur.allDay = /value\s*=\s*date/i.test(head); }
+    else if(key === 'DTEND') cur.end = icsDateTime(val);
+    else if(key === 'SUMMARY') cur.summary = icsUnescape(val);
+    else if(key === 'LOCATION') cur.room = icsUnescape(val);
+    else if(key === 'STATUS') cur.status = val.trim().toUpperCase();
+    else if(key === 'RRULE') cur.rrule = val.trim();
+  });
+  if(cur) events.push(cur);
+  return events;
+}
+const ICS_DOW = ['SU','MO','TU','WE','TH','FR','SA'];
+function icsOccurrences(start, rrule, span){
+  const dates = [start.date];
+  if(!rrule) return dates;
+  const p = {};
+  rrule.split(';').forEach(function(x){
+    const i = x.indexOf('=');
+    if(i > 0) p[x.slice(0, i).toUpperCase()] = x.slice(i + 1);
+  });
+  const freq = (p.FREQ || '').toUpperCase();
+  if(freq !== 'WEEKLY' && freq !== 'DAILY') return dates;
+  const interval = Math.max(1, parseInt(p.INTERVAL, 10) || 1);
+  const byday = (p.BYDAY || '').split(',').map(s => s.trim().slice(-2).toUpperCase())
+    .filter(s => ICS_DOW.indexOf(s) >= 0);
+  const until = p.UNTIL ? icsDateTime(p.UNTIL) : null;
+  const maxCount = p.COUNT ? Math.min(parseInt(p.COUNT, 10) || 0, 200) : 0;
+  const base = new Date(start.date + 'T00:00:00');
+  const baseDow = base.getDay();
+  const spanDays = span || 120;
+  let produced = 1;
+  for(let i = 1; i <= spanDays; i++){
+    if(maxCount && produced >= maxCount) break;
+    const d = new Date(base.getFullYear(), base.getMonth(), base.getDate() + i);
+    const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    if(until && iso > until.date) break;
+    const dow = ICS_DOW[d.getDay()];
+    let hit;
+    if(freq === 'DAILY'){
+      hit = (i % interval) === 0;
+    }else{
+      hit = byday.length ? byday.indexOf(dow) >= 0 : (dow === ICS_DOW[baseDow]);
+      if(hit && interval > 1) hit = Math.floor((baseDow + i) / 7) % interval === 0;
+    }
+    if(hit && (!byday.length || byday.indexOf(dow) >= 0)){ dates.push(iso); produced++; }
+  }
+  return dates;
+}
+function icsToEntries(text){
+  const slots = new Map();
+  parseIcsEvents(text).forEach(function(e){
+    if(!e.start || e.allDay || e.start.time === '00:00' || e.status === 'CANCELLED') return;
+    const subject = (e.summary || '').replace(/^\s*[*~+\-]\s*/, '') || 'Lesson';
+    const endTime = (e.end && e.end.date === e.start.date) ? e.end.time : '';
+    icsOccurrences(e.start, e.rrule).forEach(function(date){
+      const d = new Date(date + 'T00:00:00');
+      if(isNaN(d.getTime())) return;
+      const day = DAYS[(d.getDay() + 6) % 7];
+      const key = day + '|' + e.start.time;
+      const sig = subject + '\u0001' + (e.room || '') + '\u0001' + endTime;
+      let group = slots.get(key);
+      if(!group){ group = new Map(); slots.set(key, group); }
+      let opt = group.get(sig);
+      if(!opt){ opt = {subject, room:e.room || '', end:endTime, count:0, last:date}; group.set(sig, opt); }
+      opt.count++;
+      if(date > opt.last) opt.last = date;
+    });
+  });
+  const entries = [];
+  slots.forEach(function(group, key){
+    let best = null;
+    group.forEach(function(opt){
+      if(!best || opt.count > best.count || (opt.count === best.count && opt.last > best.last)) best = opt;
+    });
+    const i = key.indexOf('|');
+    entries.push({day:key.slice(0, i), time:key.slice(i+1), end:best.end, subject:best.subject, room:best.room});
+  });
+  entries.sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day) || a.time.localeCompare(b.time));
+  return entries;
+}
+function applyUntisEntries(entries){
+  const manual = timetable.filter(c => c.src !== 'untis' && c.src !== 'demo');
+  const taken = new Set(manual.map(c => c.day + '|' + c.time));
+  const fresh = entries
+    .filter(e => !taken.has(e.day + '|' + e.time))
+    .map(e => ({time:e.time, end:e.end, subject:e.subject, room:e.room, day:e.day, src:'untis'}));
+  timetable = manual.concat(fresh);
+  saveTimetable();
+  return fresh.length;
+}
+function ingestIcs(text, label){
+  let entries;
+  try{ entries = icsToEntries(text); }
+  catch(err){ untisStatus('Could not read the iCal data: ' + err.message, 'err'); return false; }
+  if(!entries.length){ untisStatus('No lessons found in ' + label + '.', 'err'); return false; }
+  const added = applyUntisEntries(entries);
+  untisCfg.lastSync = Date.now();
+  store.set('untisCfg', untisCfg);
+  untisStatus(`Imported ${added} lesson${added === 1 ? '' : 's'} from ${label} · kept ${timetable.length - added} of your own rows · ${new Date().toLocaleString()}`, 'ok');
+  return true;
+}
+function importUntisFile(){
+  const input = document.getElementById('untisFile');
+  const file = input.files && input.files[0];
+  if(!file){ untisStatus('Choose an .ics file first.', 'err'); return; }
+  const reader = new FileReader();
+  reader.onload = () => ingestIcs(reader.result, file.name);
+  reader.onerror = () => untisStatus('Could not read that file.', 'err');
+  reader.readAsText(file);
+}
+function importUntisPaste(){
+  const text = document.getElementById('untisPaste').value.trim();
+  if(!text){ untisStatus('Paste your iCal (.ics) content first.', 'err'); return; }
+  ingestIcs(text, 'pasted iCal');
+}
+function buildSyncUrl(raw, proxy){
+  if(!proxy) return raw;
+  return proxy.includes('{url}') ? proxy.replace('{url}', encodeURIComponent(raw)) : proxy + encodeURIComponent(raw);
+}
+async function runUntisSync(){
+  if(!untisCfg.url){ untisStatus('Paste your WebUntis calendar link first.', 'err'); return false; }
+  untisStatus('Downloading from WebUntis…');
+  try{
+    const res = await fetch(buildSyncUrl(untisCfg.url, untisCfg.proxy), {headers:{'Accept':'text/calendar'}});
+    if(!res.ok) throw new Error('server replied HTTP ' + res.status);
+    const text = await res.text();
+    if(!/BEGIN:VCALENDAR/i.test(text)) throw new Error('the response is not a calendar file');
+    return ingestIcs(text, 'WebUntis');
+  }catch(err){
+    untisStatus('Sync failed: ' + err.message + '. WebUntis blocks cross-site requests, so add a CORS proxy above, or import the .ics file from the other tab.', 'err');
+    return false;
+  }
+}
+async function syncUntis(){ readUntisCfg(); await runUntisSync(); }
+if(untisCfg.auto && untisCfg.url && Date.now() - (untisCfg.lastSync || 0) > SYNC_MIN_INTERVAL){
+  runUntisSync();
+}
 
 /* ---------- Full Day Schedule ---------- */
 const catColors = {Morning:'#f4b942', Study:'#7c6cf0', Meals:'#4fc3a1', Exercise:'#f0779c', School:'#5aa9e6', Leisure:'#c17ae0', Sleep:'#6b7086', Other:'#e5556a'};

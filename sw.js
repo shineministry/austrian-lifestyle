@@ -1,4 +1,4 @@
-const CACHE_NAME = 'austrian-lifestyle-v6';
+const CACHE_NAME = 'austrian-lifestyle-v7';
 const LOCAL_FILES = [
   'index.html',
   'student-dashboard.html',
