@@ -781,16 +781,24 @@ function buildSyncUrl(raw, proxy){
 }
 async function runUntisSync(){
   if(!untisCfg.url){ untisStatus('Paste your WebUntis calendar link first.', 'err'); return false; }
+  const openNote = () => { const n = document.querySelector('#uPaneUrl details'); if(n) n.open = true; };
+  if(!/api\/ical/i.test(untisCfg.url) && /#|\/WebUntis\?school=/i.test(untisCfg.url)){
+    openNote();
+    untisStatus('That is the WebUntis timetable page, not a calendar link. In WebUntis open your timetable and use the ⋮ menu below it (or your profile) → Calendar subscription / iCal, then copy the link starting with …/WebUntis/api/ical?… and paste it here.', 'err');
+    return false;
+  }
   untisStatus('Downloading from WebUntis…');
   try{
     const res = await fetch(buildSyncUrl(untisCfg.url, untisCfg.proxy), {headers:{'Accept':'text/calendar'}});
-    if(!res.ok) throw new Error('server replied HTTP ' + res.status);
+    if(!res.ok){
+      const body = await res.text().catch(() => '');
+      throw new Error('server replied HTTP ' + res.status + (body ? ' — ' + body.replace(/\s+/g, ' ').slice(0, 150) : ''));
+    }
     const text = await res.text();
     if(!/BEGIN:VCALENDAR/i.test(text)) throw new Error('the response is not a calendar file');
     return ingestIcs(text, 'WebUntis');
   }catch(err){
-    const note = document.querySelector('#uPaneUrl details');
-    if(note) note.open = true;
+    openNote();
     untisStatus('Sync failed: ' + err.message + '. WebUntis blocks cross-site requests, so press "Use recommended" under the CORS proxy note above, or import the .ics file from the other tab.', 'err');
     return false;
   }
