@@ -424,14 +424,17 @@
           <details class="untis-hint">
             <summary>Link will not load? (CORS proxy)</summary>
             <div style="margin-top:7px">
-              WebUntis sends no CORS headers, so browsers block this page from fetching your
-              calendar directly. Add a proxy prefix below and your link is appended to it —
-              e.g. <b>https://api.allorigins.win/raw?url=</b> or your own Cloudflare Worker
-              (<b>…workers.dev/?url=</b>). Your calendar token passes through that proxy, so
-              use one you trust. No proxy? Use the <b>Calendar file</b> tab instead.
+              WebUntis sends no CORS headers, so the browser blocks this page from fetching your
+              calendar directly — a proxy is required. Quickest: press <b>Use recommended</b>, a
+              public proxy that needs no signup (<b>https://proxy.corsfix.com/?url=</b>), but your
+              calendar token does pass through it. Prefer to keep it private? Deploy
+              <b>untis-proxy/worker.js</b> from this repo on Cloudflare Workers — free, ~2 minutes,
+              steps are inside the file — then paste <b>https://…workers.dev/?url=</b>.
+              No proxy at all? Use the <b>Calendar file</b> tab instead.
             </div>
             <div class="untis-row" style="margin-top:8px">
               <input type="text" id="untisProxy" placeholder="CORS proxy prefix (optional)" onchange="readUntisCfg()">
+              <button class="btn-ghost" onclick="fillRecommendedProxy()">Use recommended</button>
             </div>
           </details>
         </div>
@@ -609,6 +612,12 @@ function readUntisCfg(){
   store.set('untisCfg', untisCfg);
 }
 function saveUntisCfgOnly(){ readUntisCfg(); untisStatus('Settings saved.', 'ok'); }
+const RECOMMENDED_PROXY = 'https://proxy.corsfix.com/?url=';
+function fillRecommendedProxy(){
+  document.getElementById('untisProxy').value = RECOMMENDED_PROXY;
+  readUntisCfg();
+  untisStatus('Recommended proxy set — paste your calendar link, then press Sync now.', 'ok');
+}
 function untisStatus(msg, kind){
   const el = document.getElementById('untisStatus');
   el.textContent = msg;
@@ -780,11 +789,13 @@ async function runUntisSync(){
     if(!/BEGIN:VCALENDAR/i.test(text)) throw new Error('the response is not a calendar file');
     return ingestIcs(text, 'WebUntis');
   }catch(err){
-    untisStatus('Sync failed: ' + err.message + '. WebUntis blocks cross-site requests, so add a CORS proxy above, or import the .ics file from the other tab.', 'err');
+    const note = document.querySelector('#uPaneUrl details');
+    if(note) note.open = true;
+    untisStatus('Sync failed: ' + err.message + '. WebUntis blocks cross-site requests, so press "Use recommended" under the CORS proxy note above, or import the .ics file from the other tab.', 'err');
     return false;
   }
 }
-async function syncUntis(){ readUntisCfg(); await runUntisSync(); }
+async function syncUntis(){ readUntisCfg(); return await runUntisSync(); }
 if(untisCfg.auto && untisCfg.url && Date.now() - (untisCfg.lastSync || 0) > SYNC_MIN_INTERVAL){
   runUntisSync();
 }
